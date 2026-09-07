@@ -25,6 +25,8 @@ const configuredOrigins = (process.env.FRONTEND_URL || '')
   .map((origin) => origin.trim().replace(/\/+$/, '').toLowerCase())
   .filter(Boolean);
 
+const productionOrigins = ['https://top-speed-frontend-nine.vercel.app'];
+
 // Local development origins
 const localOrigins = ['http://localhost:5173', 'http://localhost:5759', 'http://localhost:3000'];
 
@@ -39,7 +41,7 @@ const isAllowedOrigin = (origin) => {
   }
 
   // Check configured origins
-  if (configuredOrigins.includes(normalized)) {
+  if ([...configuredOrigins, ...productionOrigins].includes(normalized)) {
     return true;
   }
 
