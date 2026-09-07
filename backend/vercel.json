@@ -2,7 +2,7 @@
   "version": 2,
   "buildCommand": "echo 'Backend ready for deployment'",
   "functions": {
-    "api/[...path].js": {
+    "api/**/*.js": {
       "maxDuration": 60,
       "memory": 1024
     }
