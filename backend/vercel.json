@@ -1,14 +1,8 @@
 {
   "version": 2,
   "buildCommand": "echo 'Backend ready for deployment'",
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/index.js"
-    }
-  ],
   "functions": {
-    "api/**/*.js": {
+    "api/[...path].js": {
       "maxDuration": 60,
       "memory": 1024
     }
