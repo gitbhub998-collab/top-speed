@@ -25,7 +25,10 @@ const configuredOrigins = (process.env.FRONTEND_URL || '')
   .map((origin) => origin.trim().replace(/\/+$/, '').toLowerCase())
   .filter(Boolean);
 
-const productionOrigins = ['https://top-speed-frontend-nine.vercel.app'];
+const productionOrigins = [
+  'https://top-speed-frontend-nine.vercel.app',
+  'https://top-speed-bm.vercel.app',
+];
 
 // Local development origins
 const localOrigins = ['http://localhost:5173', 'http://localhost:5759', 'http://localhost:3000'];
@@ -62,7 +65,7 @@ app.use(
         return;
       }
 
-      console.warn(`⚠️  CORS blocked origin: ${origin}`);
+      console.warn(` CORS blocked origin: ${origin}`);
       callback(new Error(`Origin ${origin} not allowed by CORS`));
     },
     credentials: false,
@@ -116,13 +119,13 @@ app.use((req, res) => {
 // Server startup for local development
 if (NODE_ENV !== 'production') {
   const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ TOP SPEED Backend running on http://localhost:${PORT}`);
-    console.log(`📍 API available at http://localhost:${PORT}/api`);
-    console.log(`🔒 CORS enabled for: ${configuredOrigins.join(', ') || 'localhost only'}`);
+    console.log(` TOP SPEED Backend running on http://localhost:${PORT}`);
+    console.log(` API available at http://localhost:${PORT}/api`);
+    console.log(` CORS enabled for: ${configuredOrigins.join(', ') || 'localhost only'}`);
   });
 
   server.on('error', (error) => {
-    console.error('❌ Failed to start backend server:', error);
+    console.error(' Failed to start backend server:', error);
     process.exit(1);
   });
 }
