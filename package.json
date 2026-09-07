@@ -1,0 +1,21 @@
+{
+  "name": "top-speed",
+  "version": "1.0.0",
+  "description": "Premium automotive platform for car modifications",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w frontend\" \"npm run dev -w backend\"",
+    "build": "npm run build -w frontend && npm run build -w backend",
+    "start": "npm start -w backend",
+    "frontend": "npm run dev -w frontend",
+    "backend": "npm run dev -w backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.1"
+  }
+}

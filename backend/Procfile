@@ -1,0 +1,3 @@
+web: node src/server.js
+
+release: echo "TOP SPEED Backend deployed"

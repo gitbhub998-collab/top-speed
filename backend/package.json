@@ -1,0 +1,30 @@
+{
+  "name": "top-speed-backend",
+  "version": "1.0.0",
+  "description": "TOP SPEED Backend API",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "build": "echo 'Backend ready for deployment'",
+    "test": "node --test --import ./test/setup.js src tests"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.15.8",
+    "axios": "^1.5.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^5.1.0",
+    "express-validator": "^7.0.0",
+    "file-type": "^21.3.4",
+    "jsonwebtoken": "^9.0.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^10.0.0",
+    "ws": "^8.21.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
