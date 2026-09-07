@@ -26,7 +26,7 @@ export const HomePage = () => {
   return (
     <PageTransition>
       <div className="app-shell">
-      <section className="hero-section relative min-h-[calc(100vh-4.5rem)] overflow-hidden flex items-center">
+      <section className="hero-section relative min-h-[calc(100vh-4.5rem)] overflow-hidden flex items-start">
         <video
           className="hero-video"
           autoPlay
@@ -43,7 +43,7 @@ export const HomePage = () => {
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:4rem_4rem]"></div>
         </div>
 
-        <div className="relative z-10 mx-auto w-full -translate-y-12 px-3 py-10 text-left sm:-translate-y-16 sm:px-4 sm:py-16 md:px-6 md:py-20 lg:px-8">
+        <div className="relative z-10 mx-auto w-full px-3 pb-10 pt-12 text-left sm:px-4 sm:pb-16 sm:pt-20 md:px-6 md:pb-20 md:pt-24 lg:px-8">
           <AnimatedContainer>
             <p className="eyebrow mb-4">The automotive atelier</p>
             <h1 className="display-heading text-4xl sm:text-6xl md:text-7xl lg:text-7xl font-normal text-white mb-5 sm:mb-6 leading-[0.98] sm:leading-[0.94] max-w-4xl">
