@@ -301,15 +301,15 @@ export const CarsPage = () => {
         />
 
         <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-12">
-        <div className="mb-6 sm:mb-8 flex gap-2 sm:gap-4 overflow-x-auto pb-4">
+        <div className="mb-6 flex gap-2 overflow-x-auto pb-3 sm:mb-8 sm:gap-3">
           {brands.map((brand) => (
             <button
               key={brand}
               onClick={() => setSelectedBrand(brand)}
-              className={`px-3 sm:px-4 md:px-6 py-1 sm:py-2 rounded-lg text-xs sm:text-sm md:text-base font-semibold transition whitespace-nowrap ${
+                className={`shrink-0 rounded-[var(--radius-sm)] px-3 py-2 text-xs font-semibold whitespace-nowrap transition sm:px-4 sm:text-sm ${
                 selectedBrand === brand
                   ? 'accent-button'
-                  : 'bg-gray-900 text-gray-300 hover:bg-gray-800'
+                    : 'border border-white/10 bg-white/[0.04] text-slate-300 hover:border-white/25 hover:bg-white/[0.08] hover:text-white'
               }`}
             >
               {brand}
@@ -319,12 +319,12 @@ export const CarsPage = () => {
 
         {loading ? (
           <div className="text-center py-8 sm:py-12">
-            <div className="w-10 sm:w-12 h-10 sm:h-12 border-4 border-gray-700 border-t-red-600 rounded-full animate-spin mx-auto"></div>
+            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-white/10 border-t-orange-300 sm:h-12 sm:w-12"></div>
             <p className="text-xs sm:text-sm md:text-base text-gray-400 mt-3 sm:mt-4">Loading cars...</p>
           </div>
         ) : error ? (
           <div className="text-center py-8 sm:py-12">
-            <p className="text-sm sm:text-base md:text-lg text-red-600 font-semibold">{error}</p>
+            <p className="text-sm font-semibold text-red-200 sm:text-base md:text-lg">{error}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
@@ -334,7 +334,7 @@ export const CarsPage = () => {
                   to={`/car-detail?carId=${car._id}`}
                   className="block group cursor-pointer h-full"
                 >
-                  <div className="aspect-video bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg mb-3 sm:mb-4 flex items-center justify-center overflow-hidden group-hover:opacity-90 transition">
+                  <div className="mb-4 flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-gradient-to-br from-slate-800 to-slate-950 transition group-hover:brightness-110 sm:mb-5">
                     {car.imageUrl ? (
                       <img
                         src={car.imageUrl}
@@ -348,34 +348,52 @@ export const CarsPage = () => {
                       </div>
                     )}
                   </div>
-                  <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-1 sm:mb-2 group-hover:text-red-600 transition">
+                  <h3 className="mb-1 text-lg font-bold text-white transition group-hover:text-orange-200 sm:mb-2 sm:text-xl md:text-2xl">
                     {car.brand} {car.model}
                   </h3>
                   <p className="text-xs sm:text-sm text-gray-400 mb-1 sm:mb-2">{car.year}</p>
-                  <p className="text-red-600 font-bold text-base sm:text-lg md:text-xl mb-3 sm:mb-4">
+                  <p className="mb-3 text-base font-bold text-orange-200 sm:mb-4 sm:text-lg md:text-xl">
                     {new Intl.NumberFormat('en-US', {
                       minimumFractionDigits: 0,
                     }).format(car.price)}
                   </p>
+                  {car.modifications?.length > 0 && (
+                    <div className="mb-4 rounded-[var(--radius-sm)] border border-orange-200/10 bg-orange-200/[0.04] p-3">
+                      <p className="mb-2 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-orange-100/70">Available upgrades</p>
+                      <div className="space-y-1.5">
+                        {car.modifications.slice(0, 3).map((modification) => (
+                          <div key={modification._id || modification.id} className="flex items-center justify-between gap-3 text-xs">
+                            <span className="min-w-0 truncate text-slate-300">{modification.name}</span>
+                            <strong className="shrink-0 text-orange-200">
+                              {modification.priceType === 'percentage'
+                                ? `${modification.price || 0}%`
+                                : `AED ${Number(modification.price || 0).toLocaleString()}`}
+                            </strong>
+                          </div>
+                        ))}
+                      </div>
+                      {car.modifications.length > 3 && <p className="mt-2 text-[0.65rem] text-slate-500">+{car.modifications.length - 3} more upgrades</p>}
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
-                    <div className="bg-gray-800 rounded-lg p-2 sm:p-3">
-                      <Zap className="w-3 sm:w-4 h-3 sm:h-4 text-red-600 mb-1" />
-                      <p className="text-xs text-gray-400">Horsepower</p>
+                    <div className="metric-tile rounded-[var(--radius-sm)] border p-2 sm:p-3">
+                      <Zap className="mb-1 h-3 w-3 text-orange-300 sm:h-4 sm:w-4" />
+                      <p className="text-xs text-slate-400">Horsepower</p>
                       <p className="text-xs sm:text-sm text-white font-bold">{car.horsepower} HP</p>
                     </div>
-                    <div className="bg-gray-800 rounded-lg p-2 sm:p-3">
-                      <Gauge className="w-3 sm:w-4 h-3 sm:h-4 text-blue-600 mb-1" />
-                      <p className="text-xs text-gray-400">Top Speed</p>
+                    <div className="metric-tile rounded-[var(--radius-sm)] border p-2 sm:p-3">
+                      <Gauge className="mb-1 h-3 w-3 text-blue-300 sm:h-4 sm:w-4" />
+                      <p className="text-xs text-slate-400">Top Speed</p>
                       <p className="text-xs sm:text-sm text-white font-bold">{car.topSpeed} km/h</p>
                     </div>
-                    <div className="bg-gray-800 rounded-lg p-2 sm:p-3">
-                      <Fuel className="w-3 sm:w-4 h-3 sm:h-4 text-orange-600 mb-1" />
-                      <p className="text-xs text-gray-400">Fuel Type</p>
+                    <div className="metric-tile rounded-[var(--radius-sm)] border p-2 sm:p-3">
+                      <Fuel className="mb-1 h-3 w-3 text-orange-200 sm:h-4 sm:w-4" />
+                      <p className="text-xs text-slate-400">Fuel Type</p>
                       <p className="text-xs sm:text-sm text-white font-bold">{car.fuelType}</p>
                     </div>
-                    <div className="bg-gray-800 rounded-lg p-2 sm:p-3">
-                      <Wrench className="w-3 sm:w-4 h-3 sm:h-4 text-gray-400 mb-1" />
-                      <p className="text-xs text-gray-400">0-100 km/h</p>
+                    <div className="metric-tile rounded-[var(--radius-sm)] border p-2 sm:p-3">
+                      <Wrench className="mb-1 h-3 w-3 text-slate-300 sm:h-4 sm:w-4" />
+                      <p className="text-xs text-slate-400">0-100 km/h</p>
                       <p className="text-xs sm:text-sm text-white font-bold">{typeof car.acceleration === 'number' ? car.acceleration.toFixed(1) : (parseFloat(car.acceleration) || 0).toFixed(1)}s</p>
                     </div>
                   </div>

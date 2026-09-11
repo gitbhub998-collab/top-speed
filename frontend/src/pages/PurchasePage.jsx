@@ -1,176 +1,141 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Header, Footer } from '../components/Layout';
-import { PageTransition } from '../components/Animations';
-import { ArrowLeft, Zap, Gauge, Fuel, Wrench } from 'lucide-react';
+import { ArrowLeft, Check, CreditCard, Fuel, Gauge, ShieldCheck, Timer, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Footer } from '../components/Layout';
+import { PageTransition } from '../components/Animations';
+import { carService, configuratorService } from '../services/api';
+
+const formatPrice = (price) => new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 0,
+}).format(price);
 
 export const PurchasePage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  
-  // Get car data from URL params
-  const carData = {
-    brand: searchParams.get('brand') || 'Unknown',
-    model: searchParams.get('model') || 'Unknown',
-    year: parseInt(searchParams.get('year') || '2024'),
-    price: parseInt(searchParams.get('price') || '0'),
-    horsepower: parseInt(searchParams.get('horsepower') || '0'),
-    torque: parseInt(searchParams.get('torque') || '0'),
-    topSpeed: parseInt(searchParams.get('topSpeed') || '0'),
-    acceleration: parseFloat(searchParams.get('acceleration') || '0'),
-    fuelType: searchParams.get('fuelType') || 'Petrol',
-    engineType: searchParams.get('engineType') || 'Unknown',
-    cylinders: parseInt(searchParams.get('cylinders') || '0'),
-    drivetrain: searchParams.get('drivetrain') || 'Unknown',
-    imageUrl: searchParams.get('imageUrl') || '/images/cars/default.jpg',
-  };
+  const carId = searchParams.get('carId') || '';
+  const modificationIds = searchParams.get('modificationIds')?.split(',').filter(Boolean) || [];
+  const [carData, setCarData] = useState(null);
+  const [loadError, setLoadError] = useState('');
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
+  useEffect(() => {
+    let isCurrent = true;
+    const loadPurchaseData = async () => {
+      if (!carId) {
+        setLoadError('This vehicle is unavailable.');
+        return;
+      }
+      try {
+        const [carResponse, configurationResponse] = await Promise.all([
+          carService.getCarById(carId),
+          configuratorService.calculateConfiguration(carId, modificationIds),
+        ]);
+        if (!isCurrent) return;
+        const car = carResponse.data.car;
+        const configuration = configurationResponse.data;
+        setCarData({
+          carId: car.id,
+          brand: car.brand,
+          model: car.model,
+          year: Number(car.year || 0),
+          price: Number(car.price || 0) + Number(configuration.totalPrice || 0),
+          horsepower: Number(configuration.modifiedHorsepower ?? car.horsepower ?? 0),
+          torque: Number(configuration.modifiedTorque ?? car.torque ?? 0),
+          topSpeed: Number(configuration.modifiedTopSpeed ?? car.topSpeed ?? 0),
+          acceleration: Number(configuration.modifiedAcceleration ?? car.acceleration ?? 0),
+          fuelType: car.fuelType || 'Petrol',
+          engineType: car.engine?.type || 'Unknown',
+          cylinders: Number(car.engine?.cylinders || 0),
+          drivetrain: car.drivetrain || 'Unknown',
+          imageUrl: car.imageUrl || '/images/cars/default.jpg',
+        });
+      } catch (error) {
+        if (isCurrent) setLoadError(error.response?.data?.error || 'Unable to load the secure order summary.');
+      }
+    };
+    loadPurchaseData();
+    return () => { isCurrent = false; };
+  }, [carId, modificationIds.join(',')]);
+
+  if (loadError) return <main className="checkout-page"><div className="checkout-shell"><p className="payment-error" role="alert">{loadError}</p></div></main>;
+  if (!carData) return <main className="checkout-page"><div className="checkout-shell"><p className="empty-modifications">Loading secure order summary...</p></div></main>;
+
+  const specs = [
+    { label: 'Power', value: `${carData.horsepower} HP`, icon: Zap },
+    { label: 'Torque', value: `${carData.torque} Nm`, icon: Gauge },
+    { label: '0-100 km/h', value: `${carData.acceleration.toFixed(1)}s`, icon: Timer },
+    { label: 'Top speed', value: `${carData.topSpeed} km/h`, icon: Fuel },
+  ];
 
   return (
     <PageTransition>
-      
-      <div className="page-surface">
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-12">
-        {/* Back Button */}
-        <motion.button
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-xs sm:text-sm md:text-base text-red-600 hover:text-red-500 mb-4 sm:mb-6 md:mb-8 font-semibold transition"
-        >
-          <ArrowLeft className="w-4 sm:w-5 h-4 sm:h-5" />
-          Back
-        </motion.button>
+      <main className="checkout-page">
+        <div className="checkout-shell">
+          <motion.button initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} onClick={() => navigate(-1)} className="checkout-back-link">
+            <ArrowLeft size={16} />
+            Back to vehicle
+          </motion.button>
 
-        <div className="grid md:grid-cols-2 gap-4 sm:gap-6 md:gap-8 items-center justify-center">
-          {/* Car Details Card - Square */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="max-w-sm mx-auto md:mx-0"
-          >
-            <div className="form-surface rounded-xl border overflow-hidden shadow-2xl">
-              {/* Car Image */}
-              <div className="h-48 sm:h-56 md:h-64 lg:h-72 overflow-hidden bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
+          <header className="checkout-header">
+            <div>
+              <p className="eyebrow">Order checkout</p>
+              <h1>Complete your purchase</h1>
+              <p>Review the vehicle details, then choose your preferred secure payment method.</p>
+            </div>
+            <div className="checkout-step"><span>01</span><i /><span>Payment</span></div>
+          </header>
+
+          <div className="checkout-layout">
+            <motion.section initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="order-summary-panel" aria-labelledby="order-summary-heading">
+              <div className="checkout-panel-heading">
+                <div><p className="eyebrow">Order summary</p><h2 id="order-summary-heading">Your vehicle</h2></div>
+                <span className="order-status"><Check size={13} /> Ready</span>
+              </div>
+              <div className="checkout-car-visual">
                 <img
                   src={carData.imageUrl}
                   alt={`${carData.brand} ${carData.model}`}
-                  className="max-w-full max-h-full object-contain hover:scale-110 transition-transform duration-500"
+                  onError={(event) => {
+                    event.currentTarget.hidden = true;
+                    event.currentTarget.parentElement.classList.add('checkout-car-visual--fallback');
+                  }}
                 />
+                <span className="checkout-image-fallback">Vehicle image unavailable</span>
               </div>
+              <div className="checkout-car-heading">
+                <div><span>{carData.brand} · {carData.year}</span><h3>{carData.model}</h3></div>
+                <span className="checkout-category">{carData.drivetrain}</span>
+              </div>
+              <div className="checkout-spec-grid">
+                {specs.map(({ label, value, icon: Icon }) => <div key={label}><Icon size={15} /><span>{label}</span><strong>{value}</strong></div>)}
+              </div>
+              <div className="checkout-engine-row">
+                <div><span>Powertrain</span><strong>{carData.engineType}</strong></div>
+                <div><span>Fuel / cylinders</span><strong>{carData.fuelType} · {carData.cylinders} Cyl</strong></div>
+              </div>
+            </motion.section>
 
-              {/* Car Info Section */}
-              <div className="p-2 sm:p-3 md:p-4">
-                {/* Header */}
-                <div className="mb-2 sm:mb-3 md:mb-4">
-                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">
-                    {carData.brand}
-                  </h2>
-                  <p className="text-base sm:text-lg md:text-lg text-red-600 font-semibold mt-0.5 sm:mt-1">
-                    {carData.model}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5 sm:mt-1">Year: {carData.year}</p>
-                </div>
-
-                {/* Price Highlight */}
-                <div className="accent-button rounded-lg p-2 sm:p-3 mb-2 sm:mb-3 md:mb-4">
-                  <p className="text-gray-100 text-xs font-semibold uppercase tracking-wide">Price</p>
-                  <p className="text-white text-lg sm:text-xl md:text-2xl font-bold mt-0.5 sm:mt-1">
-                    {formatPrice(carData.price)}
-                  </p>
-                </div>
-
-                {/* Key Specs */}
-                <div className="space-y-1 sm:space-y-2 mb-2 sm:mb-3 md:mb-4">
-                  <div className="flex justify-between items-center border-b border-gray-800 pb-1 sm:pb-2">
-                    <span className="text-gray-400 flex items-center gap-1 text-xs sm:text-sm">
-                      <Zap className="w-3 h-3 text-yellow-500" />
-                      Horsepower
-                    </span>
-                    <span className="text-white font-semibold text-xs sm:text-sm">{carData.horsepower} hp</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b border-gray-800 pb-1 sm:pb-2">
-                    <span className="text-gray-400 text-xs sm:text-sm">Torque</span>
-                    <span className="text-white font-semibold text-xs sm:text-sm">{carData.torque} Nm</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b border-gray-800 pb-1 sm:pb-2">
-                    <span className="text-gray-400 flex items-center gap-1 text-xs sm:text-sm">
-                      <Gauge className="w-3 h-3 text-orange-600" />
-                      0-100
-                    </span>
-                    <span className="text-white font-semibold text-xs sm:text-sm">{carData.acceleration.toFixed(1)}s</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b border-gray-800 pb-1 sm:pb-2">
-                    <span className="text-gray-400 flex items-center gap-1 text-xs sm:text-sm">
-                      <Fuel className="w-3 h-3 text-green-600" />
-                      Top Speed
-                    </span>
-                    <span className="text-white font-semibold text-xs sm:text-sm">{carData.topSpeed}</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b border-gray-800 pb-1 sm:pb-2">
-                    <span className="text-gray-400 text-xs sm:text-sm">{carData.fuelType}</span>
-                    <span className="text-white font-semibold text-xs sm:text-sm">{carData.drivetrain}</span>
-                  </div>
-                </div>
-
-                {/* Engine Info */}
-                <div className="bg-gray-900 rounded-lg p-2 sm:p-3">
-                  <p className="text-gray-400 text-xs font-semibold uppercase">Engine</p>
-                  <p className="text-white text-xs font-semibold mt-0.5 sm:mt-1">{carData.engineType}</p>
-                  <p className="text-gray-500 text-xs mt-0.5 sm:mt-1">{carData.cylinders} Cyl</p>
+            <motion.section initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="payment-panel" aria-labelledby="payment-heading">
+              <div className="checkout-panel-heading">
+                <div><p className="eyebrow">Payment method</p><h2 id="payment-heading"><CreditCard size={20} /> Choose how to pay</h2></div>
+                <span className="payment-secure"><ShieldCheck size={15} /> Secure</span>
+              </div>
+              <div className="payment-methods" role="group" aria-label="Payment method">
+                <div className="payment-method payment-method--selected">
+                  <span className="payment-method-icon">IP</span>
+                  <span><strong>Instapay</strong><small>Scan QR code</small></span>
+                  <Check size={16} />
                 </div>
               </div>
-            </div>
-          </motion.div>
-
-          {/* QR Code Section */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="flex flex-col items-center justify-center"
-          >
-            <div className="text-center mb-4 sm:mb-6 md:mb-8">
-              <h3 className="text-lg sm:text-2xl md:text-3xl font-bold text-white mb-1 sm:mb-2">
-                Complete Your buying process
-              </h3>
-              <p className="text-xs sm:text-sm md:text-base text-gray-400">
-                Scan the QR code below to pay via Instapay
-              </p>
-            </div>
-
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              transition={{ duration: 0.3 }}
-              className="bg-white p-4 sm:p-6 md:p-8 rounded-xl shadow-2xl border-4 border-orange-300"
-            >
-              <img
-                src="/images/cars/Instapay.jpg"
-                alt="Instapay QR Code"
-                className="w-48 sm:w-56 md:w-64 h-48 sm:h-56 md:h-64 object-contain"
-              />
-            </motion.div>
-
-            <div className="mt-4 sm:mt-6 md:mt-8 text-center">
-              <p className="text-xs sm:text-sm md:text-base text-gray-300">
-                Open your banking app and scan this code to proceed with payment
-              </p>
-              <p className="text-red-600 font-semibold mt-1 sm:mt-2 text-xs sm:text-sm md:text-base">
-                Total Amount: {formatPrice(carData.price)}
-              </p>
-            </div>
-          </motion.div>
+              <div className="payment-instruction"><span className="payment-step-number">1</span><div><strong>Scan the payment QR</strong><p>Use your banking app to scan the code and transfer the exact order amount.</p></div></div>
+              <div className="payment-qr-frame"><img src="/images/cars/Instapay.jpg" alt="Instapay payment QR code" /></div>
+              <div className="payment-instruction payment-instruction--last"><span className="payment-step-number">2</span><div><strong>Keep your transfer confirmation</strong><p>Our team will use the payment confirmation to verify and process your vehicle order.</p></div></div>
+              <div className="checkout-total"><span>Total amount</span><strong>{formatPrice(carData.price)} <small>EGP</small></strong></div>
+              <div className="payment-note"><ShieldCheck size={16} /><span>Payment is processed through Instapay. Do not send a different amount.</span></div>
+            </motion.section>
+          </div>
         </div>
-      </div>
-    </div>
-
+      </main>
       <Footer />
     </PageTransition>
   );

@@ -71,20 +71,20 @@ export const Navigation = ({ onSettingsClick }) => {
 
   return (
     <nav className="sticky top-0 z-50 border-b border-white/10 bg-[#08111c]/90 shadow-[0_12px_40px_rgba(0,0,0,0.16)] backdrop-blur-xl">
-      <div className="mx-auto flex h-[4.75rem] max-w-7xl items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6">
+      <div className="mx-auto flex min-h-[4.5rem] max-w-7xl items-center justify-between gap-2 px-3 py-2 sm:gap-4 sm:px-6">
         <Link to={user ? '/home' : '/'} className="group flex min-w-0 items-center gap-3 transition duration-300 hover:opacity-90 active:scale-[0.98]">
           <span className="min-w-0">
             <img
               src="/images/logo.jpg"
               alt="TOP SPEED Logo"
-              className="h-auto w-24 object-contain object-left mix-blend-screen transition duration-300 group-hover:brightness-110 sm:w-40"
+              className="h-auto w-28 object-contain object-left mix-blend-screen transition duration-300 group-hover:brightness-110 sm:w-40"
             />
             <span className="mt-0.5 hidden text-[0.55rem] font-semibold uppercase tracking-[0.3em] text-slate-500 sm:block">Performance / Craft</span>
           </span>
         </Link>
 
         {!isAuthenticationRoute && (
-          <div className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 md:flex">
+          <div className="hidden items-center gap-1 rounded-[var(--radius-md)] border border-white/10 bg-white/[0.03] p-1 md:flex">
             {navItems.map(renderNavItem)}
             {isAdmin && (
               <Link
@@ -102,7 +102,7 @@ export const Navigation = ({ onSettingsClick }) => {
         <div className="flex items-center gap-1.5 sm:gap-3">
           {user ? (
             <div className="flex items-center gap-2">
-              <div className="hidden items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.04] py-1.5 pl-1.5 pr-3 sm:flex">
+              <div className="hidden items-center gap-2.5 rounded-[var(--radius-md)] border border-white/10 bg-white/[0.04] py-1.5 pl-1.5 pr-3 sm:flex">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-300 text-xs font-black text-[#08111c]">
                   {initials || 'D'}
                 </span>
@@ -144,7 +144,7 @@ export const Navigation = ({ onSettingsClick }) => {
       </div>
       {user && !isAuthenticationRoute && isMobileMenuOpen && (
         <div className="border-t border-white/10 bg-[#0d1b2a] px-3 py-4 md:hidden sm:px-4">
-          <div className="mb-4 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3">
+          <div className="mb-4 flex items-center gap-3 rounded-[var(--radius-md)] border border-white/10 bg-white/[0.04] p-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-300 text-sm font-black text-[#08111c]">{initials || 'D'}</span>
             <div>
               <p className="text-sm font-bold text-white">{displayName}</p>

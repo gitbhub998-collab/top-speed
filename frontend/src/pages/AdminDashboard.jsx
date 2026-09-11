@@ -148,6 +148,36 @@ export const AdminDashboard = () => {
       [fieldName]: { ...currentConfig[fieldName], ...updates },
     }));
   };
+  const handleCarImageUpload = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(file.type) || file.size > 4 * 1024 * 1024) {
+      alert('Choose a PNG, JPG, JPEG, or WebP image smaller than 4MB.');
+      return;
+    }
+
+    const image = new Image();
+    const reader = new FileReader();
+    reader.onload = () => { image.src = reader.result; };
+    image.onload = () => {
+      const maxDimension = 1200;
+      const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+      const context = canvas.getContext('2d');
+      if (!context) {
+        alert('Unable to prepare this image.');
+        return;
+      }
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      setFormData((current) => ({ ...current, imageUrl: canvas.toDataURL('image/jpeg', 0.78) }));
+    };
+    image.onerror = () => alert('Unable to read this image.');
+    reader.readAsDataURL(file);
+  };
 
   const fetchData = async () => {
     try {
@@ -824,20 +854,27 @@ export const AdminDashboard = () => {
                           />
                         </div>
 
-                        {/* Image URL */}
+                        {/* Car image */}
                         <div className="md:col-span-2" hidden={!isFieldEnabled('images')}>
                           <label className="block text-sm font-semibold text-gray-300 mb-2">
-                            Image URL
+                            Car image
                           </label>
                           <input
-                            type="url"
-                            placeholder="https://example.com/car-image.jpg"
+                            type="file"
+                            accept="image/png,image/jpeg,image/jpg,image/webp"
+                            onChange={handleCarImageUpload}
+                            className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white file:mr-3 file:rounded file:border-0 file:bg-orange-300 file:px-3 file:py-1 file:font-semibold file:text-[#08111c]"
+                            required={isFormFieldRequired('images') && !formData.imageUrl}
+                          />
+                          <p className="mt-2 text-xs text-gray-500">Upload once; the image is stored permanently and reused across the catalog.</p>
+                          <input
+                            type="text"
+                            placeholder="Or paste an existing image URL"
                             value={formData.imageUrl}
                             onChange={(e) =>
                               setFormData({ ...formData, imageUrl: e.target.value })
                             }
                             className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-red-600 focus:outline-none transition"
-                            required={isFieldRequired('images')}
                           />
                         </div>
 
@@ -946,7 +983,7 @@ export const AdminDashboard = () => {
                               </p>
                               {car.price > 0 && (
                                 <p className="text-red-400 font-semibold mb-3 text-sm sm:text-base">
-                                  AED {car.price.toLocaleString()}
+                                  AED {Number(car.price || 0).toLocaleString()}
                                 </p>
                               )}
                               <div className="flex gap-2 flex-wrap">
@@ -1076,7 +1113,7 @@ export const AdminDashboard = () => {
                                     }
                                   >
                                     {car.price > 0
-                                      ? `AED ${car.price.toLocaleString()}`
+                                      ? `AED ${Number(car.price || 0).toLocaleString()}`
                                       : 'Not set'}
                                   </span>
                                 </td>

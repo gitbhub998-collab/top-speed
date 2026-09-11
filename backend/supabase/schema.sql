@@ -5,6 +5,10 @@ insert into storage.buckets (id, name, public)
 values ('avatars', 'avatars', true)
 on conflict (id) do update set public = true;
 
+insert into storage.buckets (id, name, public)
+values ('car-images', 'car-images', true)
+on conflict (id) do update set public = true;
+
 create table if not exists public.users (
   id uuid primary key,
   name text,
@@ -42,11 +46,30 @@ create table if not exists public.cars (
   year int,
   horsepower int,
   torque int,
+  engine jsonb,
+  fuel_type text,
+  drivetrain text,
+  acceleration numeric,
+  top_speed numeric,
+  category text,
+  external_id text,
   price numeric(12,2),
   description text,
+  image_url text,
   is_visible boolean not null default true,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+
+alter table public.cars add column if not exists engine jsonb;
+alter table public.cars add column if not exists fuel_type text;
+alter table public.cars add column if not exists drivetrain text;
+alter table public.cars add column if not exists acceleration numeric;
+alter table public.cars add column if not exists top_speed numeric;
+alter table public.cars add column if not exists category text;
+alter table public.cars add column if not exists external_id text;
+alter table public.cars add column if not exists image_url text;
+alter table public.cars add column if not exists updated_at timestamptz not null default now();
 
 create table if not exists public.modifications (
   id uuid primary key default gen_random_uuid(),

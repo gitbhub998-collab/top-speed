@@ -1,4 +1,6 @@
+import crypto from 'node:crypto';
 import { getCarsByBrand } from '../services/carApiService.js';
+import { fileTypeFromBuffer } from 'file-type';
 import {
   getCars,
   getCarById as getCarByIdFromStore,
@@ -8,7 +10,35 @@ import {
   findCarByIdentity,
   getModifications,
   deleteModificationsByCarId,
+  uploadCarImage,
 } from '../services/supabaseDataService.js';
+
+const IMAGE_DATA_URL_PATTERN = /^data:(image\/(?:png|jpeg|jpg|webp));base64,([A-Za-z0-9+/=]+)$/;
+const MAX_CAR_IMAGE_BYTES = 2 * 1024 * 1024;
+
+const persistCarImage = async (carId, image) => {
+  if (typeof image !== 'string' || !image.startsWith('data:')) return image || null;
+  const match = image.match(IMAGE_DATA_URL_PATTERN);
+  if (!match) {
+    const error = new Error('Upload a PNG, JPEG, or WebP image');
+    error.status = 400;
+    throw error;
+  }
+  const buffer = Buffer.from(match[2], 'base64');
+  if (buffer.length === 0 || buffer.length > MAX_CAR_IMAGE_BYTES) {
+    const error = new Error('Image must be smaller than 2MB after compression');
+    error.status = 400;
+    throw error;
+  }
+  const expectedMime = match[1] === 'image/jpg' ? 'image/jpeg' : match[1];
+  const detectedType = await fileTypeFromBuffer(buffer);
+  if (!detectedType || detectedType.mime !== expectedMime) {
+    const error = new Error('The uploaded file type is invalid');
+    error.status = 400;
+    throw error;
+  }
+  return uploadCarImage(carId, buffer, expectedMime);
+};
 
 export const getAllCars = async (req, res) => {
   try {
@@ -18,7 +48,14 @@ export const getAllCars = async (req, res) => {
     }
 
     const cars = await getCars({ brand, isVisible, includeHidden });
-    res.json(cars);
+    const modifications = await getModifications({ activeOnly: true });
+    const carsWithModifications = cars.map((car) => ({
+      ...car,
+      modifications: modifications.filter((modification) => (
+        modification.carId === car.id || modification.compatibleCarIds?.includes(car.id)
+      )),
+    }));
+    res.json(carsWithModifications);
   } catch (error) {
     console.error('Error fetching cars:', error);
     res.status(500).json({ error: 'Failed to fetch cars from database' });
@@ -43,18 +80,24 @@ export const getCarById = async (req, res) => {
 
 export const createCar = async (req, res) => {
   try {
-    const carData = req.body;
+    const carId = req.body?.id || crypto.randomUUID();
+    const imageUrl = await persistCarImage(carId, req.body?.imageUrl);
+    const carData = { ...req.body, id: carId, imageUrl };
     const car = await createCarInStore(carData);
     res.status(201).json(car);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create car' });
+    console.error('Error creating car:', error);
+    res.status(error.status || 500).json({ error: error.status ? error.message : 'Failed to create car' });
   }
 };
 
 export const updateCar = async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const updates = { ...req.body };
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'imageUrl')) {
+      updates.imageUrl = await persistCarImage(id, req.body.imageUrl);
+    }
 
     const car = await updateCarInStore(id, updates);
 
@@ -64,7 +107,8 @@ export const updateCar = async (req, res) => {
 
     res.json(car);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update car' });
+    console.error('Error updating car:', error);
+    res.status(error.status || 500).json({ error: error.status ? error.message : 'Failed to update car' });
   }
 };
 

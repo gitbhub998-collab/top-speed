@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { carService, configuratorService } from '../services/api';
-import { Header, Footer } from '../components/Layout';
+import { Footer } from '../components/Layout';
 import { PageTransition } from '../components/Animations';
-import { Zap, Gauge, Fuel, Wrench, ArrowLeft, Droplets, X } from 'lucide-react';
+import { ArrowLeft, BatteryCharging, Cog, Droplets, Gauge, Timer, Wrench, X, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const CarDetailPage = () => {
@@ -19,6 +19,9 @@ export const CarDetailPage = () => {
   const [configuration, setConfiguration] = useState(null);
   const [configurationError, setConfigurationError] = useState('');
   const [isImageOpen, setIsImageOpen] = useState(false);
+  const configurationRequestRef = useRef(0);
+  const imageTriggerRef = useRef(null);
+  const imageCloseRef = useRef(null);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-US', {
@@ -325,7 +328,17 @@ export const CarDetailPage = () => {
   ];
 
   useEffect(() => {
+    let isCurrent = true;
+
     const fetchCar = async () => {
+      setLoading(true);
+      setCar(null);
+      setError(null);
+      setModifications([]);
+      setSelectedModificationIds([]);
+      setConfiguration(null);
+      setConfigurationError('');
+
       try {
         if (!carId) {
           setError('No car ID provided');
@@ -336,6 +349,7 @@ export const CarDetailPage = () => {
         // محاولة جلب من API أولاً
         try {
           const response = await carService.getCarById(carId);
+          if (!isCurrent) return;
           setCar({
             ...response.data.car,
             engine: {
@@ -346,40 +360,50 @@ export const CarDetailPage = () => {
             },
           });
           setModifications(Array.isArray(response.data.modifications) ? response.data.modifications : []);
-        } catch (apiErr) {
-          // إذا فشل، استخدم البيانات الافتراضية
-          const defaultCar = DEFAULT_CARS.find(c => c._id === carId);
-          if (defaultCar) {
-            setCar(defaultCar);
-          } else {
-            setError('Car not found');
-          }
+        } catch (apiError) {
+          if (!isCurrent) return;
+          setError(apiError.response?.status === 404 ? 'This vehicle is no longer available.' : 'Unable to load vehicle data. Please try again.');
         }
       } catch (err) {
-        setError('Failed to load car details');
+        if (isCurrent) setError('Failed to load car details');
         console.error(err);
       } finally {
-        setLoading(false);
+        if (isCurrent) setLoading(false);
       }
     };
 
     fetchCar();
+    return () => {
+      isCurrent = false;
+    };
   }, [carId]);
 
   useEffect(() => {
     if (!isImageOpen) return undefined;
 
+    imageCloseRef.current?.focus();
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') setIsImageOpen(false);
+      if (event.key === 'Escape') {
+        setIsImageOpen(false);
+        imageTriggerRef.current?.focus();
+      }
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        imageCloseRef.current?.focus();
+      }
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      imageTriggerRef.current?.focus();
+    };
   }, [isImageOpen]);
 
   const handleModificationToggle = async (modification) => {
     const modificationId = modification._id || modification.id;
     const isSelected = selectedModificationIds.includes(modificationId);
+    const previousSelectedModificationIds = selectedModificationIds;
     const nextIds = isSelected
       ? selectedModificationIds.filter((id) => id !== modificationId)
       : [...selectedModificationIds, modificationId];
@@ -403,12 +427,16 @@ export const CarDetailPage = () => {
 
     setConfigurationError('');
     setSelectedModificationIds(nextIds);
+    const requestId = configurationRequestRef.current + 1;
+    configurationRequestRef.current = requestId;
     try {
       const response = await configuratorService.calculateConfiguration(carId, nextIds);
+      if (requestId !== configurationRequestRef.current) return;
       setConfiguration(response.data);
     } catch (requestError) {
+      if (requestId !== configurationRequestRef.current) return;
       setConfigurationError(requestError.response?.data?.error || 'Unable to calculate this configuration.');
-      setSelectedModificationIds(selectedModificationIds);
+      setSelectedModificationIds(previousSelectedModificationIds);
     }
   };
 
@@ -441,228 +469,146 @@ export const CarDetailPage = () => {
     );
   }
 
+  const performanceMetrics = [
+    { label: 'Horsepower', value: `${car.horsepower} HP`, icon: Zap, tone: 'red' },
+    { label: 'Torque', value: `${car.torque} Nm`, icon: Droplets, tone: 'blue' },
+    { label: '0-100 km/h', value: `${typeof car.acceleration === 'number' ? car.acceleration.toFixed(1) : (parseFloat(car.acceleration) || 0).toFixed(1)}s`, icon: Timer, tone: 'amber' },
+    { label: 'Top Speed', value: `${car.topSpeed} km/h`, icon: Gauge, tone: 'green' },
+  ];
+
   return (
     <PageTransition>
-      <div className="page-surface">
-      
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-12">
-        {/* زر العودة */}
-        <motion.button
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          onClick={() => navigate('/cars')}
-          className="flex items-center gap-2 text-xs sm:text-sm md:text-base text-red-600 hover:text-red-500 mb-4 sm:mb-6 md:mb-8 font-semibold transition"
-        >
-          <ArrowLeft className="w-4 sm:w-5 h-4 sm:h-5" />
-          Back to Cars
-        </motion.button>
-
-      <div className="flex justify-center">
-        <div className="max-w-2xl w-full flex flex-col items-center">
-          {/* الصورة */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="mb-4 flex max-w-full items-center justify-center sm:mb-6 md:mb-8"
+      <main className="car-detail-page">
+        <div className="car-detail-shell">
+          <motion.button
+            initial={{ opacity: 0, x: -16 }}
+            animate={{ opacity: 1, x: 0 }}
+            onClick={() => navigate('/cars')}
+            className="car-back-link"
           >
-            {car.imageUrl ? (
-              <button
-                type="button"
-                onClick={() => setIsImageOpen(true)}
-                aria-label={`View ${car.brand} ${car.model} image`}
-                className="group block aspect-video w-full max-w-2xl overflow-hidden rounded-xl bg-gradient-to-br from-gray-900 to-black p-0.5 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-slate-950"
-              >
-                <img
-                  src={car.imageUrl}
-                  alt={`${car.brand} ${car.model}`}
-                  className="block h-full w-full rounded-[0.65rem] object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                />
-              </button>
-            ) : (
-              <div className="flex items-center justify-center">
-                <Wrench className="w-16 sm:w-20 md:w-24 h-16 sm:h-20 md:h-24 text-gray-600" />
+            <ArrowLeft size={16} />
+            Back to collection
+          </motion.button>
+
+          <section className="car-identity-grid" aria-labelledby="car-title">
+            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="car-visual-panel">
+              <div className="car-visual-grid" aria-hidden="true" />
+              {car.imageUrl ? (
+                <button ref={imageTriggerRef} type="button" onClick={() => setIsImageOpen(true)} aria-label={`View ${car.brand} ${car.model} image`} className="car-image-trigger">
+                  <img src={car.imageUrl} alt={`${car.brand} ${car.model}`} className="car-detail-image" />
+                </button>
+              ) : (
+                <Wrench className="car-image-fallback" aria-hidden="true" />
+              )}
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="car-identity-panel">
+              <p className="eyebrow">{car.brand} / {car.category}</p>
+              <h1 id="car-title" className="car-title">{car.model}</h1>
+              <p className="car-brand-label">{car.brand} <span>·</span> {car.year}</p>
+              <p className="car-description">{car.description}</p>
+              <div className="car-price-block">
+                <span>Starting price</span>
+                <strong>{formatPrice(car.price) || 'N/A'} <small>AED</small></strong>
               </div>
-            )}
-          </motion.div>
+              <div className="car-identity-tags">
+                <span><Cog size={15} /> {car.drivetrain}</span>
+                <span><BatteryCharging size={15} /> {car.fuelType}</span>
+                <span><Gauge size={15} /> {car.topSpeed} km/h</span>
+              </div>
+            </motion.div>
+          </section>
 
           {isImageOpen && car.imageUrl && (
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-label={`${car.brand} ${car.model} image`}
-              onClick={() => setIsImageOpen(false)}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 sm:p-6"
-            >
-              <button
-                type="button"
-                onClick={() => setIsImageOpen(false)}
-                aria-label="Close image"
-                className="absolute right-4 top-4 rounded-full border border-white/20 bg-black/60 p-2 text-white transition hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400"
-              >
-                <X className="h-5 w-5" />
-              </button>
-              <img
-                src={car.imageUrl}
-                alt={`${car.brand} ${car.model}`}
-                onClick={(event) => event.stopPropagation()}
-                className="block max-h-[82vh] max-w-[min(92vw,960px)] rounded-lg object-contain shadow-2xl"
-              />
+            <div role="dialog" aria-modal="true" aria-label={`${car.brand} ${car.model} image`} onClick={() => setIsImageOpen(false)} className="car-image-modal">
+              <button ref={imageCloseRef} type="button" onClick={() => setIsImageOpen(false)} aria-label="Close image" className="car-image-close"><X size={20} /></button>
+              <img src={car.imageUrl} alt={`${car.brand} ${car.model}`} onClick={(event) => event.stopPropagation()} className="car-modal-image" />
             </div>
           )}
 
-          {/* التفاصيل */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full"
-          >
-            {/* الرأس */}
-            <div className="mb-4 sm:mb-6 md:mb-8">
-              <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-1 sm:mb-2 break-words">
-                {car.brand} {car.model}
-              </h1>
-              <p className="text-lg sm:text-2xl text-red-600 font-semibold mb-2 sm:mb-4">
-                {formatPrice(car.price) || 'N/A'}
-              </p>
-              <p className="text-xs sm:text-sm md:text-base text-gray-300 mb-3 sm:mb-4">{car.description}</p>
-              <div className="flex gap-2 sm:gap-4">
-                <span className="px-2 sm:px-4 py-1 sm:py-2 bg-red-600 text-white text-xs sm:text-sm md:text-base rounded-lg font-semibold">
-                  {car.year}
-                </span>
-                <span className="px-2 sm:px-4 py-1 sm:py-2 bg-gray-800 text-gray-300 text-xs sm:text-sm md:text-base rounded-lg font-semibold">
-                  {car.category}
-                </span>
+          <section className="performance-section" aria-labelledby="performance-heading">
+            <div className="section-kicker-row"><p className="eyebrow">Performance overview</p></div>
+            <h2 id="performance-heading" className="sr-only">Performance data</h2>
+            <div className="performance-grid">
+              {performanceMetrics.map(({ label, value, icon: Icon, tone }) => (
+                <div key={label} className={`performance-card performance-card--${tone}`}>
+                  <Icon size={20} strokeWidth={1.8} aria-hidden="true" />
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="detail-lower-grid">
+            <div className="engine-panel detail-panel">
+              <div className="detail-panel-heading"><div><p className="eyebrow">Engineering profile</p><h2><Cog size={20} /> Engine Details</h2></div></div>
+              <div className="engine-spec-grid">
+                <div><span>Engine architecture</span><strong>{car.engine.type}</strong></div>
+                <div><span>Cylinders</span><strong>{car.engine.cylinders} Cyl</strong></div>
+                <div><span>Displacement</span><strong>{car.engine.displacement} cc</strong></div>
+                <div><span>Fuel system</span><strong>{car.fuelType}</strong></div>
+                <div><span>Drive layout</span><strong>{car.drivetrain}</strong></div>
               </div>
             </div>
 
-            {/* مواصفات الأداء */}
-            <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6 md:mb-8">
-              <div className="bg-gray-900 rounded-lg p-2 sm:p-3 md:p-4 border border-gray-800">
-                <Zap className="w-4 sm:w-5 h-4 sm:h-5 text-red-600 mb-1" />
-                <p className="text-xs text-gray-400">Horsepower</p>
-                <p className="text-base sm:text-xl md:text-2xl text-white font-bold">{car.horsepower} HP</p>
-              </div>
-              <div className="bg-gray-900 rounded-lg p-2 sm:p-3 md:p-4 border border-gray-800">
-                <Droplets className="w-4 sm:w-5 h-4 sm:h-5 text-blue-600 mb-1" />
-                <p className="text-xs text-gray-400">Torque</p>
-                <p className="text-base sm:text-xl md:text-2xl text-white font-bold">{car.torque} Nm</p>
-              </div>
-              <div className="bg-gray-900 rounded-lg p-2 sm:p-3 md:p-4 border border-gray-800">
-                <Gauge className="w-4 sm:w-5 h-4 sm:h-5 text-orange-600 mb-1" />
-                <p className="text-xs text-gray-400">0-100 km/h</p>
-                <p className="text-base sm:text-xl md:text-2xl text-white font-bold">{typeof car.acceleration === 'number' ? car.acceleration.toFixed(1) : (parseFloat(car.acceleration) || 0).toFixed(1)}s</p>
-              </div>
-              <div className="bg-gray-900 rounded-lg p-2 sm:p-3 md:p-4 border border-gray-800">
-                <Fuel className="w-4 sm:w-5 h-4 sm:h-5 text-green-600 mb-1" />
-                <p className="text-xs text-gray-400">Top Speed</p>
-                <p className="text-base sm:text-xl md:text-2xl text-white font-bold">{car.topSpeed} km/h</p>
-              </div>
-            </div>
-
-            {/* تفاصيل المحرك */}
-            <div className="form-surface rounded-lg p-3 sm:p-4 md:p-6 border mb-4 sm:mb-6 md:mb-8">
-              <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-3 sm:mb-4 flex items-center gap-2">
-                <Wrench className="w-4 sm:w-5 h-4 sm:h-5 text-red-600" />
-                Engine Details
-              </h3>
-              <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
-                <div>
-                  <p className="text-xs text-gray-400">Engine Type</p>
-                  <p className="text-xs sm:text-sm text-white font-semibold">{car.engine.type}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">Cylinders</p>
-                  <p className="text-xs sm:text-sm text-white font-semibold">{car.engine.cylinders} Cyl</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">Displacement</p>
-                  <p className="text-xs sm:text-sm text-white font-semibold">{car.engine.displacement} cc</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">Fuel Type</p>
-                  <p className="text-xs sm:text-sm text-white font-semibold">{car.fuelType}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">Drivetrain</p>
-                  <p className="text-xs sm:text-sm text-white font-semibold">{car.drivetrain}</p>
-                </div>
-              </div>
-            </div>
-
-            <section className="form-surface rounded-lg p-4 sm:p-6 border mb-4 sm:mb-6" aria-labelledby="modifications-heading">
-              <div className="flex items-start justify-between gap-4 mb-4">
-                <div>
-                  <p className="eyebrow mb-2">Available upgrades</p>
-                  <h2 id="modifications-heading" className="display-heading text-2xl sm:text-3xl font-normal text-white">Modifications</h2>
-                </div>
-                <Wrench className="shrink-0" size={20} aria-hidden="true" />
-              </div>
-              {configurationError && <div role="alert" className="mb-4 rounded border border-red-400/40 bg-red-900/20 px-3 py-2 text-sm text-red-200">{configurationError}</div>}
+            <section className="modifications-panel detail-panel" aria-labelledby="modifications-heading">
+              <div className="detail-panel-heading"><div><p className="eyebrow">Available upgrades</p><h2 id="modifications-heading"><Wrench size={20} /> Modifications</h2></div></div>
+              {configurationError && <div role="alert" className="configuration-alert">{configurationError}</div>}
               {modifications.length === 0 ? (
-                <p className="text-sm text-slate-400">No active modifications are available for this vehicle.</p>
+                <p className="empty-modifications">No active modifications are available for this vehicle.</p>
               ) : (
-                <div className="space-y-2">
+                <div className="modification-list">
                   {modifications.map((modification) => {
                     const modificationId = modification._id || modification.id;
                     const isSelected = selectedModificationIds.includes(modificationId);
                     return (
-                      <label key={modificationId} className={`flex items-center justify-between gap-3 rounded border p-3 cursor-pointer transition ${isSelected ? 'border-orange-300/60 bg-orange-300/10' : 'border-white/10 bg-[#0a1521] hover:border-white/25'}`}>
-                        <span className="flex items-center gap-3 min-w-0">
-                          <input type="checkbox" checked={isSelected} onChange={() => handleModificationToggle(modification)} className="accent-orange-300 w-4 h-4" />
-                          <span className="min-w-0"><span className="block text-sm font-semibold text-white truncate">{modification.name}</span><span className="block text-xs text-slate-400">{modification.category || modification.type || 'Other'} · {modification.priceType === 'percentage' ? `${modification.price || 0}%` : `AED ${Number(modification.price || 0).toLocaleString()}`}</span></span>
-                        </span>
-                        <span className="text-right text-xs text-slate-300 shrink-0">{modification.horsepower ? `+${modification.horsepower} HP` : ''}{modification.torque ? ` · +${modification.torque} Nm` : ''}</span>
+                      <label key={modificationId} className={`modification-row ${isSelected ? 'modification-row--selected' : ''}`}>
+                        <span className="modification-check"><input type="checkbox" checked={isSelected} onChange={() => handleModificationToggle(modification)} /><span /></span>
+                        <span className="modification-copy"><strong>{modification.name}</strong><small>{modification.category || modification.type || 'Other'} · {modification.priceType === 'percentage' ? `${modification.price || 0}%` : `AED ${Number(modification.price || 0).toLocaleString()}`}</small></span>
+                        <span className="modification-output">{modification.horsepower ? `+${modification.horsepower} HP` : ''}{modification.torque ? ` · +${modification.torque} Nm` : ''}</span>
                       </label>
                     );
                   })}
                 </div>
               )}
               {configuration && (
-                <div className="mt-5 border-t border-white/10 pt-4">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div><p className="text-xs text-slate-500">With selected</p><p className="text-lg font-bold text-white">{configuration.modifiedHorsepower} HP</p></div>
-                  <div><p className="text-xs text-slate-500">Torque</p><p className="text-lg font-bold text-white">{configuration.modifiedTorque} Nm</p></div>
-                  <div><p className="text-xs text-slate-500">0-100</p><p className="text-lg font-bold text-white">{Number(configuration.modifiedAcceleration || 0).toFixed(1)}s</p></div>
-                  <div><p className="text-xs text-slate-500">Mods total</p><p className="text-lg font-bold text-orange-200">AED {Number(configuration.totalPrice || 0).toLocaleString()}</p></div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">{(configuration.modifications || []).map((modification) => <span key={modification.id || modification._id || modification.name} className="rounded border border-orange-300/30 bg-orange-300/10 px-2 py-1 text-xs text-orange-100">{modification.name}</span>)}</div>
-                  <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3 text-sm"><span className="text-slate-400">Final vehicle price</span><strong className="text-xl text-orange-200">AED {(Number(car.price || 0) + Number(configuration.totalPrice || 0)).toLocaleString()}</strong></div>
+                <div className="configuration-summary">
+                  <div><span>Output</span><strong>{configuration.modifiedHorsepower} HP</strong></div>
+                  <div><span>Torque</span><strong>{configuration.modifiedTorque} Nm</strong></div>
+                  <div><span>0-100</span><strong>{Number(configuration.modifiedAcceleration || 0).toFixed(1)}s</strong></div>
+                  <div><span>Upgrade total</span><strong>EGP {Number(configuration.totalPrice || 0).toLocaleString()}</strong></div>
+                  <p>Final vehicle price <strong>EGP {(Number(car.price || 0) + Number(configuration.totalPrice || 0)).toLocaleString()}</strong></p>
                 </div>
               )}
             </section>
+          </section>
 
-            {/* أزرار */}
-            <div className="grid grid-cols-1 gap-2 sm:gap-3 md:gap-4">
-              <button 
-                onClick={() => {
-                  const params = new URLSearchParams({
-                    brand: car.brand,
-                    model: car.model,
-                    year: car.year,
-                    price: Number(car.price || 0) + Number(configuration?.totalPrice || 0),
-                    horsepower: car.horsepower,
-                    torque: car.torque,
-                    topSpeed: car.topSpeed,
-                    acceleration: car.acceleration,
-                    fuelType: car.fuelType,
-                    engineType: car.engine.type,
-                    cylinders: car.engine.cylinders,
-                    drivetrain: car.drivetrain,
-                    imageUrl: car.imageUrl,
-                  });
-                  navigate(`/purchase?${params.toString()}`);
-                }}
-                className="accent-button py-2 sm:py-3 text-xs sm:text-base md:text-lg rounded-lg font-semibold transition"
-              >
-                Buy Now
-              </button>
-            </div>
-          </motion.div>
+          <div className="purchase-bar">
+            <div><span>Purchase summary</span><strong>{car.brand} {car.model}</strong></div>
+            <button onClick={() => {
+              const params = new URLSearchParams({
+                carId: car.id,
+                brand: car.brand,
+                model: car.model,
+                year: car.year,
+                price: Number(car.price || 0) + Number(configuration?.totalPrice || 0),
+                horsepower: configuration?.modifiedHorsepower ?? car.horsepower,
+                torque: configuration?.modifiedTorque ?? car.torque,
+                topSpeed: configuration?.modifiedTopSpeed ?? car.topSpeed,
+                acceleration: configuration?.modifiedAcceleration ?? car.acceleration,
+                fuelType: car.fuelType,
+                engineType: car.engine.type,
+                cylinders: car.engine.cylinders,
+                drivetrain: car.drivetrain,
+                imageUrl: car.imageUrl,
+                modificationIds: selectedModificationIds.join(','),
+              });
+              navigate(`/purchase?${params.toString()}`);
+            }} className="purchase-button">Continue to purchase <ArrowLeft size={18} /></button>
+          </div>
         </div>
-      </div>
-      </div>
-      </div>
-
+      </main>
       <Footer />
     </PageTransition>
   );

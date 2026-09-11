@@ -107,6 +107,19 @@ const toCarRow = (input) => {
   };
 };
 
+const toCarUpdateRow = (updates) => {
+  const fieldMap = {
+    brand: 'brand', model: 'model', year: 'year', engine: 'engine', horsepower: 'horsepower', torque: 'torque',
+    fuelType: 'fuel_type', drivetrain: 'drivetrain', acceleration: 'acceleration', topSpeed: 'top_speed',
+    category: 'category', isVisible: 'is_visible', externalId: 'external_id', description: 'description',
+    price: 'price', imageUrl: 'image_url',
+  };
+  return Object.entries(fieldMap).reduce((payload, [inputKey, databaseKey]) => {
+    if (Object.prototype.hasOwnProperty.call(updates, inputKey)) payload[databaseKey] = updates[inputKey];
+    return payload;
+  }, {});
+};
+
 const normalizeModificationInput = (input) => ({
   carId: input.carId ?? input.car_id ?? null,
   compatibleCarIds: input.compatibleCarIds ?? input.compatible_car_ids ?? (input.carId ? [input.carId] : []),
@@ -382,7 +395,19 @@ export const uploadUserAvatar = async (userId, buffer, contentType) => {
   });
   if (uploadError) applyError(uploadError);
   const { data } = supabaseAdmin.storage.from('avatars').getPublicUrl(objectPath);
-  return data.publicUrl;
+  return `${data.publicUrl}?v=${Date.now()}`;
+};
+
+export const uploadCarImage = async (carId, buffer, contentType) => {
+  const objectPath = `${carId}/image`;
+  const { error: uploadError } = await supabaseAdmin.storage.from('car-images').upload(objectPath, buffer, {
+    contentType,
+    upsert: true,
+    cacheControl: '3600',
+  });
+  if (uploadError) applyError(uploadError);
+  const { data } = supabaseAdmin.storage.from('car-images').getPublicUrl(objectPath);
+  return `${data.publicUrl}?v=${Date.now()}`;
 };
 
 export const compareUserPassword = async (passwordHash, password) => {
@@ -443,8 +468,7 @@ export const createCar = async (carData) => {
 };
 
 export const updateCar = async (id, updates) => {
-  const payload = toCarRow({ ...updates, id });
-  delete payload.id;
+  const payload = toCarUpdateRow(updates);
   payload.updated_at = new Date().toISOString();
   const { data, error } = await supabaseAdmin.from(CARS_TABLE).update(payload).eq('id', id).select('*').single();
   if (error) applyError(error);

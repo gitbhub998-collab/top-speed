@@ -1,13 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { carService } from '../services/api';
 import { AnimatedCard, AnimatedContainer, PageTransition } from '../components/Animations';
 import { Footer } from '../components/Layout';
-import { ArrowRight, Wrench } from 'lucide-react';
+import { Wrench } from 'lucide-react';
 
 export const HomePage = () => {
   const [featuredCars, setFeaturedCars] = useState([]);
+  const [activeHeroVideo, setActiveHeroVideo] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [shouldAnimateHero, setShouldAnimateHero] = useState(true);
+  const heroVideos = Array.from({ length: 9 }, (_, index) => `/videos/TOPSPEED${index + 1}.mp4`);
+  const heroVideoRefs = useRef([]);
+  const transitionTimeoutRef = useRef(null);
+  const isTransitioningRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
     const fetchCars = async () => {
@@ -23,21 +30,94 @@ export const HomePage = () => {
     fetchCars();
   }, []);
 
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+    isMountedRef.current = false;
+    clearTimeout(transitionTimeoutRef.current);
+    heroVideoRefs.current.forEach((video) => video?.pause());
+    };
+  }, []);
+
+  useEffect(() => {
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updateMotionPreference = () => {
+      setShouldAnimateHero(!motionQuery.matches && document.documentElement.dataset.reducedMotion !== 'true');
+    };
+    const motionPreferenceObserver = new MutationObserver(updateMotionPreference);
+
+    updateMotionPreference();
+    motionPreferenceObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-reduced-motion'] });
+    motionQuery.addEventListener('change', updateMotionPreference);
+    return () => {
+      motionPreferenceObserver.disconnect();
+      motionQuery.removeEventListener('change', updateMotionPreference);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (shouldAnimateHero) {
+      heroVideoRefs.current[activeHeroVideo]?.play().catch(() => {});
+      return undefined;
+    }
+
+    clearTimeout(transitionTimeoutRef.current);
+    isTransitioningRef.current = false;
+    heroVideoRefs.current.forEach((video) => video?.pause());
+    return undefined;
+  }, [activeHeroVideo, shouldAnimateHero]);
+
+  const transitionToNextHeroVideo = (videoIndex) => {
+    if (!isMountedRef.current || !shouldAnimateHero || isTransitioningRef.current) return;
+
+    const nextVideoIndex = (videoIndex + 1) % heroVideos.length;
+    const nextVideo = heroVideoRefs.current[nextVideoIndex];
+    if (!nextVideo) return;
+
+    isTransitioningRef.current = true;
+    nextVideo.currentTime = 0;
+    nextVideo.play().then(() => {
+      if (!isMountedRef.current || !shouldAnimateHero) return;
+      setActiveHeroVideo(nextVideoIndex);
+      transitionTimeoutRef.current = setTimeout(() => {
+        const currentVideo = heroVideoRefs.current[videoIndex];
+        currentVideo?.pause();
+        isTransitioningRef.current = false;
+      }, 500);
+    }).catch(() => {
+      isTransitioningRef.current = false;
+    });
+  };
+
   return (
     <PageTransition>
       <div className="app-shell">
       <section className="hero-section relative min-h-[calc(100vh-4.5rem)] overflow-hidden flex items-start">
-        <video
-          className="hero-video"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          aria-hidden="true"
-        >
-          <source src="/TOPSPEED.mp4" type="video/mp4" />
-        </video>
+        {heroVideos.map((videoSource, index) => (
+          <video
+            key={videoSource}
+            ref={(videoElement) => {
+              heroVideoRefs.current[index] = videoElement;
+            }}
+            className={`hero-video ${activeHeroVideo === index ? 'hero-video--active' : ''}`}
+            autoPlay={shouldAnimateHero && index === 0}
+            muted
+            playsInline
+            preload={index === activeHeroVideo || index === (activeHeroVideo + 1) % heroVideos.length ? 'auto' : 'none'}
+            onTimeUpdate={(event) => {
+              if (activeHeroVideo === index && event.currentTarget.duration - event.currentTarget.currentTime < 0.55) {
+                transitionToNextHeroVideo(index);
+              }
+            }}
+            onEnded={() => transitionToNextHeroVideo(index)}
+            onError={() => {
+              if (activeHeroVideo === index) transitionToNextHeroVideo(index);
+            }}
+            aria-hidden="true"
+          >
+            <source src={videoSource} type="video/mp4" />
+          </video>
+        ))}
         <div className="hero-video-overlay" aria-hidden="true"></div>
         <div className="absolute inset-0 opacity-20" aria-hidden="true">
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:4rem_4rem]"></div>
@@ -52,15 +132,6 @@ export const HomePage = () => {
             <p className="text-sm sm:text-[0.95rem] md:text-base text-slate-300 mb-8 sm:mb-10 max-w-xl leading-relaxed">
               A sharper way to discover, configure, and care for the machines you love.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-12 sm:mb-16">
-              <Link
-                to="/cars"
-                className="w-full px-5 sm:w-auto sm:px-7 py-3 sm:py-3.5 bg-orange-400 hover:bg-orange-300 text-[#08111c] rounded font-bold text-sm sm:text-base transition inline-flex items-center justify-center gap-2 shadow-[0_12px_35px_rgba(239,155,74,0.2)]"
-              >
-                Explore Cars
-                <ArrowRight size={20} className="sm:w-5 sm:h-5 md:w-6 md:h-6" />
-              </Link>
-            </div>
           </AnimatedContainer>
 
         </div>
@@ -81,31 +152,31 @@ export const HomePage = () => {
               <div className="w-12 h-12 border-4 border-gray-700 border-t-red-600 rounded-full animate-spin mx-auto"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-3 md:gap-6">
               {featuredCars.map((car, idx) => (
                 <AnimatedCard key={car._id} delay={idx * 0.1}>
-                  <div className="aspect-video bg-gradient-to-br from-slate-800 to-slate-950 rounded mb-4 flex items-center justify-center overflow-hidden">
+                  <div className="mb-5 flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-gradient-to-br from-slate-800 to-slate-950">
                     {car.imageUrl ? (
                       <img
                         src={car.imageUrl}
                         alt={`${car.brand} ${car.model}`}
-                        className="w-full h-full object-cover rounded-lg"
+                        className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]"
                       />
                     ) : (
                       <Wrench className="w-12 h-12 text-gray-600" />
                     )}
                   </div>
-                  <h3 className="text-xl font-bold text-[#102b45] mb-2">
+                  <h3 className="mb-2 text-xl font-bold text-[#102b45]">
                     {car.brand} {car.model}
                   </h3>
-                  <div className="flex justify-between mb-4 text-sm">
+                  <div className="mb-5 grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <p className="text-slate-500">Horsepower</p>
-                      <p className="text-[#b66b2b] font-bold">{car.horsepower} HP</p>
+                      <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Horsepower</p>
+                      <p className="font-bold text-[#b66b2b]">{car.horsepower} HP</p>
                     </div>
                     <div>
-                      <p className="text-slate-500">Top Speed</p>
-                      <p className="text-[#315f82] font-bold">{car.topSpeed} km/h</p>
+                      <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Top Speed</p>
+                      <p className="font-bold text-[#315f82]">{car.topSpeed} km/h</p>
                     </div>
                   </div>
                   <Link
