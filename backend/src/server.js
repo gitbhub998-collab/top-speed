@@ -56,29 +56,30 @@ const isAllowedOrigin = (origin) => {
   return false;
 };
 
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    console.warn(` CORS blocked origin: ${origin}`);
+    callback(new Error(`Origin ${origin} not allowed by CORS`));
+  },
+  credentials: false,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Admin-Bootstrap-Secret'],
+  exposedHeaders: ['X-Total-Count', 'X-Page-Count'],
+};
+
 // Middleware
 app.use(securityHeaders);
 app.use(express.json({ limit: '8mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: false }));
 
 // CORS Configuration for Vercel and development
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (isAllowedOrigin(origin)) {
-        callback(null, true);
-        return;
-      }
-
-      console.warn(` CORS blocked origin: ${origin}`);
-      callback(new Error(`Origin ${origin} not allowed by CORS`));
-    },
-    credentials: false,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Admin-Bootstrap-Secret'],
-    exposedHeaders: ['X-Total-Count', 'X-Page-Count']
-  })
-);
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 // Health check endpoints
 app.get('/', (req, res) => {

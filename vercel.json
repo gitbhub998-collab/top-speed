@@ -39,6 +39,14 @@
       "source": "/api/(.*)",
       "headers": [
         {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization, X-Requested-With, X-Admin-Bootstrap-Secret"
+        },
+        {
           "key": "Cache-Control",
           "value": "no-cache, no-store, must-revalidate"
         },
