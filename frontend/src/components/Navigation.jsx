@@ -75,9 +75,9 @@ export const Navigation = ({ onSettingsClick }) => {
         <Link to={user ? '/home' : '/'} className="group flex min-w-0 items-center gap-3 transition duration-300 hover:opacity-90 active:scale-[0.98]">
           <span className="min-w-0">
             <img
-              src="/images/logo.jpg"
+              src="/images/logo-transparent.png"
               alt="TOP SPEED Logo"
-              className="h-auto w-28 object-contain object-left mix-blend-screen transition duration-300 group-hover:brightness-110 sm:w-40"
+              className="h-auto w-28 object-contain object-left transition duration-300 group-hover:brightness-110 sm:w-40"
             />
             <span className="mt-0.5 hidden text-[0.55rem] font-semibold uppercase tracking-[0.3em] text-slate-500 sm:block">Performance / Craft</span>
           </span>
