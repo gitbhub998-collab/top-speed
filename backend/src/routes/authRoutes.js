@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, register, verifyOTP, resendOTP, createAdmin, updateEmail, getCurrentUser, updateProfile, changePassword, uploadAvatar, logout } from '../controllers/authController.js';
+import { login, register, verifyOTP, resendOTP, forgotPassword, verifyPasswordResetOtp, resetPassword, createAdmin, updateEmail, getCurrentUser, updateProfile, changePassword, uploadAvatar, logout } from '../controllers/authController.js';
 import { authMiddleware, adminBootstrapMiddleware } from '../middleware/auth.js';
 import { adminBootstrapRateLimit, authRateLimit, otpRateLimit, registrationRateLimit, rateLimit } from '../middleware/security.js';
 
@@ -9,6 +9,9 @@ router.post('/login', authRateLimit, login);
 router.post('/register', registrationRateLimit, register);
 router.post('/verify-otp', otpRateLimit, verifyOTP);
 router.post('/resend-otp', otpRateLimit, resendOTP);
+router.post('/forgot-password', otpRateLimit, forgotPassword);
+router.post('/verify-password-reset-otp', otpRateLimit, verifyPasswordResetOtp);
+router.post('/reset-password', otpRateLimit, resetPassword);
 router.post('/create-admin', adminBootstrapRateLimit, adminBootstrapMiddleware, createAdmin);
 router.post('/update-email', authMiddleware, updateEmail);
 router.get('/me', authMiddleware, getCurrentUser);

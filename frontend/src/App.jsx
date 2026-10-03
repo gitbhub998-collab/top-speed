@@ -10,6 +10,7 @@ import { ServiceMaintenancePage } from './pages/ServiceMaintenancePage';
 import { LoginPage } from './pages/LoginPage';
 import { SignUpPage } from './pages/SignUpPage';
 import { OTPVerificationPage } from './pages/OTPVerificationPage';
+import { PasswordResetPage } from './pages/PasswordResetPage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Navigation } from './components/Navigation';
@@ -32,6 +33,7 @@ function App() {
           <Route path="/" element={<SignUpPage />} />
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/verify-otp" element={<OTPVerificationPage />} />
+          <Route path="/reset-password" element={<PasswordResetPage />} />
           <Route path="/login" element={<LoginPage />} />
 
           {/* Protected Main Routes */}

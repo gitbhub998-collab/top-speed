@@ -26,6 +26,7 @@ export const EditCarsPage = () => {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -71,8 +72,16 @@ export const EditCarsPage = () => {
 
     try {
       // Send to backend
-      await serviceService.sendModificationRequest(formData);
+      const response = await serviceService.sendModificationRequest({
+        ...formData,
+        clientName: formData.clientName.trim(),
+        phoneNumber: formData.phoneNumber.trim(),
+        email: formData.email.trim().toLowerCase(),
+        carType: formData.carType.trim(),
+        address: formData.address.trim(),
+      });
       
+      setSuccessMessage(response.data?.message || 'Your modification request was received.');
       setSubmitted(true);
       setFormData({
         clientName: '',
@@ -95,7 +104,9 @@ export const EditCarsPage = () => {
       setTimeout(() => setSubmitted(false), 5000);
     } catch (err) {
       console.error('Error submitting form:', err);
-      setError('Failed to send request. Please try again.');
+      const responseData = err.response?.data;
+      const fieldErrors = responseData?.errors ? Object.values(responseData.errors).join(' ') : '';
+      setError(fieldErrors || responseData?.message || 'Failed to send request. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -147,7 +158,7 @@ export const EditCarsPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="mb-4 sm:mb-6 p-2 sm:p-3 md:p-4 bg-red-600 text-white text-xs sm:text-sm md:text-base rounded-lg text-center font-semibold"
               >
-                Your modification request has been sent to our service team!
+                {successMessage}
               </motion.div>
             )}
 
@@ -462,4 +473,3 @@ export const EditCarsPage = () => {
     </PageTransition>
   );
 };
-

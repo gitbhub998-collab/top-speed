@@ -121,6 +121,12 @@ export const LoginPage = () => {
               )}
             </button>
 
+            <div className="flex items-center justify-between text-sm">
+              <Link to="/reset-password" className="text-red-600 hover:text-red-500 font-medium transition-colors">
+                Forgot password?
+              </Link>
+            </div>
+
             {/* Sign Up Link */}
             <div className="border-t border-gray-800 pt-6">
               <p className="text-gray-500 text-sm text-center">

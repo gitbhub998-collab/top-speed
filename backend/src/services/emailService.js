@@ -77,3 +77,15 @@ export const sendOTPEmail = async (email, userName, otp) => {
   await mailer.sendMail({ from, to: email, subject: 'Top Speed | Email verification code', text: `Hello ${userName},\n\nYour Top Speed email verification code is ${otp}.\n\nThis code expires in 10 minutes. If you did not create a Top Speed account, you can ignore this email.\n\nTop Speed`, html, headers: transactionalHeaders, category: 'account-verification', priority: 'normal' });
   return { success: true };
 };
+
+export const sendPasswordResetEmail = async (email, userName, otp) => {
+  const { from } = smtpConfig(); const mailer = transporter(); await mailer.verify();
+  const html = shell({
+    eyebrow: 'Password reset',
+    title: 'Reset your password',
+    intro: 'Use the code below to continue resetting your Top Speed password.',
+    content: `<p style="color:${BRAND.paper};font-size:14px">Hello ${text(userName)},</p><div style="margin:26px 0;padding:25px 18px;text-align:center;background:${BRAND.soft};border:1px solid ${BRAND.line}"><div style="color:${BRAND.muted};font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase">Your reset code</div><div style="margin-top:12px;color:${BRAND.bright};font:700 40px 'Courier New',monospace;letter-spacing:7px">${escapeHtml(otp)}</div><div style="margin-top:12px;color:${BRAND.muted};font-size:12px">Expires in 10 minutes</div></div><p style="color:${BRAND.muted};font-size:13px;line-height:1.7">If you did not request this change, you can safely ignore this email. Your password will stay the same unless you complete this reset flow.</p>`,
+  });
+  await mailer.sendMail({ from, to: email, subject: 'Top Speed | Password reset code', text: `Hello ${userName},\n\nYour Top Speed password reset code is ${otp}.\n\nThis code expires in 10 minutes. If you did not request this reset, ignore this email.\n\nTop Speed`, html, headers: transactionalHeaders, category: 'password-reset', priority: 'normal' });
+  return { success: true };
+};

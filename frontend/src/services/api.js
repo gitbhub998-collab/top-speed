@@ -85,6 +85,12 @@ export const authService = {
     apiClient.post('/auth/verify-otp', { email, otp }),
   resendOTP: (email) =>
     apiClient.post('/auth/resend-otp', { email }),
+  requestPasswordReset: (email) =>
+    apiClient.post('/auth/forgot-password', { email }),
+  verifyPasswordResetOtp: (email, otp) =>
+    apiClient.post('/auth/verify-password-reset-otp', { email, otp }),
+  resetPassword: (resetAuthorization, newPassword, confirmPassword) =>
+    apiClient.post('/auth/reset-password', { resetAuthorization, newPassword, confirmPassword }),
   updateEmail: (newEmail, password) =>
     apiClient.post('/auth/update-email', { newEmail, password }),
   updateProfile: (profile) => apiClient.patch('/auth/me', profile),
@@ -101,4 +107,3 @@ export const serviceService = {
   sendMaintenanceRequest: (data) =>
     apiClient.post('/service/send-maintenance-request', data),
 };
-

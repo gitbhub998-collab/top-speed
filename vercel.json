@@ -18,6 +18,11 @@
   ],
   "routes": [
     {
+      "src": "/api/service/(.*)",
+      "dest": "backend/api/service/[action].js",
+      "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+    },
+    {
       "src": "/api/(.*)",
       "dest": "backend/api/[...path].js",
       "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]

@@ -1,23 +1,25 @@
+import { createHash, randomInt, randomUUID } from 'node:crypto';
 import { generateToken } from '../utils/auth.js';
 import { isAdminUser, resolveUserRole } from '../utils/admin.js';
-import { sendOTPEmail } from '../services/emailService.js';
-import { randomInt } from 'crypto';
+import { sendOTPEmail, sendPasswordResetEmail } from '../services/emailService.js';
 import { fileTypeFromBuffer } from 'file-type';
+import { hashOtp, verifyOtpHash } from '../utils/otp.js';
 import {
   createUser,
   getUserByEmail,
   getUserById,
+  getUserByPasswordResetAuthorizationHash,
   updateUser,
   deleteUser,
   compareUserPassword,
   uploadUserAvatar,
   DEFAULT_USER_PREFERENCES,
+  startPasswordResetChallenge,
 } from '../services/supabaseDataService.js';
 
-// Generate random OTP
-const generateOTP = () => {
-  return randomInt(100000, 1000000).toString();
-};
+const passwordResetSessions = new Map();
+
+export const generateOTP = () => randomInt(100000, 1000000).toString();
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isValidPassword = (password) => typeof password === 'string' && password.length >= 8 && password.length <= 128;
@@ -50,6 +52,51 @@ const publicUser = (user) => ({
   preferences: preferenceShape(user.preferences),
   role: user.role,
 });
+
+export const normalizeRegistrationInput = ({ name, email, password }) => ({
+  name: typeof name === 'string' ? name.trim() : '',
+  email: typeof email === 'string' ? email.trim().toLowerCase() : '',
+  password: typeof password === 'string' ? password : '',
+});
+
+const clearPasswordResetChallenge = async (userId, email) => {
+  if (email) passwordResetSessions.delete(String(email).trim().toLowerCase());
+  if (!userId) return;
+
+  const existingUser = await getUserById(userId);
+  if (!existingUser) return;
+
+  await updateUser(userId, {
+    passwordResetOtpHash: null,
+    passwordResetAttempts: 0,
+    passwordResetExpiresAt: null,
+    passwordResetAuthorizationHash: null,
+    passwordResetAuthorizationExpiresAt: null,
+    passwordResetRequestWindowStartedAt: null,
+    passwordResetRequestCount: 0,
+  });
+};
+
+const resolveResetChallenge = async (email) => {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) return { user: null, otpHash: null, expiresAt: null };
+
+  const sessionChallenge = passwordResetSessions.get(normalizedEmail);
+  if (sessionChallenge) {
+    return {
+      user: await getUserByEmail(normalizedEmail),
+      otpHash: sessionChallenge.otpHash,
+      expiresAt: sessionChallenge.expiresAt,
+    };
+  }
+
+  const user = await getUserByEmail(normalizedEmail);
+  return {
+    user,
+    otpHash: user?.passwordResetOtpHash ?? null,
+    expiresAt: user?.passwordResetExpiresAt ?? null,
+  };
+};
 
 export const login = async (req, res) => {
   try {
@@ -100,9 +147,7 @@ export const login = async (req, res) => {
 
 export const register = async (req, res) => {
   try {
-    const name = (req.body.name || '').trim();
-    const email = (req.body.email || '').trim().toLowerCase();
-    const password = (req.body.password || '').trim();
+    const { name, email, password } = normalizeRegistrationInput(req.body || {});
 
     if (!isValidName(name) || !EMAIL_PATTERN.test(email) || !isValidPassword(password)) {
       return res.status(400).json({ error: 'Name, email and password are required' });
@@ -110,11 +155,67 @@ export const register = async (req, res) => {
 
     let user = await getUserByEmail(email);
     if (user) {
+      if (!user.isEmailVerified && !user.isActive) {
+        const hasActiveChallenge = Boolean(user.otpExpiresAt) && new Date() <= new Date(user.otpExpiresAt);
+        if (hasActiveChallenge) {
+          const otp = generateOTP();
+          const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+          const previousOtp = user.otp;
+          const previousOtpExpiresAt = user.otpExpiresAt;
+          try {
+            await updateUser(user.id, {
+              otp: otp,
+              otpHash: hashOtp(otp),
+              otpAttempts: 0,
+              otpExpiresAt,
+            });
+            await sendOTPEmail(email, user.name || name, otp);
+            return res.status(502).json({
+              error: 'Unable to send verification email. Please check the email address and try again.',
+            });
+          } catch (emailError) {
+            console.error('Failed to resend OTP email:', emailError);
+            await updateUser(user.id, {
+              otp: previousOtp,
+              otpHash: typeof previousOtp === 'string' ? hashOtp(previousOtp) : (user.otpHash ?? null),
+              otpExpiresAt: previousOtpExpiresAt,
+            });
+            return res.status(502).json({
+              error: 'Unable to send verification email. Please check the email address and try again.',
+            });
+          }
+        }
+
+        const otp = generateOTP();
+        const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+        try {
+          await updateUser(user.id, {
+            name,
+            password,
+            otp: otp,
+            otpHash: hashOtp(otp),
+            otpAttempts: 0,
+            otpExpiresAt,
+            isActive: false,
+            isEmailVerified: false,
+          });
+          await sendOTPEmail(email, name, otp);
+          return res.status(502).json({
+            error: 'Unable to send verification email. Please check the email address and try again.',
+          });
+        } catch (emailError) {
+          console.error('Failed to refresh pending OTP email:', emailError);
+          return res.status(502).json({
+            error: 'Unable to send verification email. Please check the email address and try again.',
+          });
+        }
+      }
+
       return res.status(400).json({ error: 'Email already registered' });
     }
 
     const otp = generateOTP();
-    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // OTP expires in 10 minutes
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     const isAdminEmail = isAdminUser({ email, role: 'user' });
 
@@ -124,6 +225,8 @@ export const register = async (req, res) => {
       password,
       role: isAdminEmail ? 'admin' : 'user',
       otp,
+      otpHash: hashOtp(otp),
+      otpAttempts: 0,
       otpExpiresAt,
       isActive: false,
       isEmailVerified: false,
@@ -163,21 +266,24 @@ export const verifyOTP = async (req, res) => {
       return res.status(401).json({ error: 'User not found' });
     }
 
-    // Check if OTP is expired
-    if (!user.otpExpiresAt || new Date() > user.otpExpiresAt) {
+    const candidateHash = user.otpHash ?? (typeof user.otp === 'string' ? hashOtp(user.otp) : null);
+
+    if (!user.otpExpiresAt || new Date() > new Date(user.otpExpiresAt)) {
       return res.status(401).json({ error: 'OTP has expired. Please sign up again.' });
     }
 
-    // Check if OTP is correct
-    if (user.otp !== otp) {
+    if (!verifyOtpHash(otp, candidateHash ?? '')) {
+      const nextAttempts = (user.otpAttempts ?? 0) + 1;
+      await updateUser(user.id, { otpAttempts: nextAttempts });
       return res.status(401).json({ error: 'Invalid OTP. Please try again.' });
     }
 
-    // Mark as verified and activate
     user = await updateUser(user.id, {
       isEmailVerified: true,
       isActive: true,
       otp: null,
+      otpHash: null,
+      otpAttempts: 0,
       otpExpiresAt: null,
     });
 
@@ -225,8 +331,11 @@ export const resendOTP = async (req, res) => {
 
     const previousOtp = user.otp;
     const previousOtpExpiresAt = user.otpExpiresAt;
+    const previousOtpHash = user.otpHash;
     await updateUser(user.id, {
       otp,
+      otpHash: hashOtp(otp),
+      otpAttempts: 0,
       otpExpiresAt,
     });
 
@@ -236,6 +345,7 @@ export const resendOTP = async (req, res) => {
       console.error('Failed to resend OTP email:', emailError);
       await updateUser(user.id, {
         otp: previousOtp,
+        otpHash: previousOtpHash,
         otpExpiresAt: previousOtpExpiresAt,
       });
       return res.status(500).json({ error: 'Failed to send verification email. Please try again.' });
@@ -246,6 +356,164 @@ export const resendOTP = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Unable to resend the verification email. Please try again.' });
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const isEmailValid = typeof req.body?.email === 'string' && EMAIL_PATTERN.test(req.body.email);
+
+    if (!isEmailValid) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const user = await getUserByEmail(email);
+    const genericResponse = {
+      message: 'If an account exists for this email, a reset code has been sent.',
+    };
+
+    if (!user) {
+      return res.json(genericResponse);
+    }
+
+    const otp = generateOTP();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    const otpHash = hashOtp(otp);
+
+    await startPasswordResetChallenge(user.id, {
+      otpHash,
+      expiresAt,
+    });
+
+    try {
+      await sendPasswordResetEmail(email, user.name, otp);
+    } catch (emailError) {
+      console.error('Failed to send password reset email:', emailError);
+      passwordResetSessions.delete(email);
+      await updateUser(user.id, {
+        passwordResetOtpHash: null,
+        passwordResetAttempts: 0,
+        passwordResetExpiresAt: null,
+        passwordResetAuthorizationHash: null,
+        passwordResetAuthorizationExpiresAt: null,
+      });
+      return res.json(genericResponse);
+    }
+
+    passwordResetSessions.set(email, { otpHash, expiresAt });
+    return res.json(genericResponse);
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    return res.status(500).json({ error: 'Unable to process this request. Please try again.' });
+  }
+};
+
+export const verifyPasswordResetOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body || {};
+
+    if (typeof email !== 'string' || !EMAIL_PATTERN.test(email) || typeof otp !== 'string' || !/^\d{6}$/.test(otp)) {
+      return res.status(400).json({ error: 'Email and OTP are required' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const { user, otpHash, expiresAt } = await resolveResetChallenge(normalizedEmail);
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid or expired reset code' });
+    }
+
+    const challengeHash = otpHash ?? user.passwordResetOtpHash ?? null;
+    const challengeExpiresAt = expiresAt ?? user.passwordResetExpiresAt ?? null;
+    const passwordResetAttempts = Number(user.passwordResetAttempts ?? 0);
+    const hasActiveAuthorization = Boolean(user.passwordResetAuthorizationHash)
+      && Boolean(user.passwordResetAuthorizationExpiresAt)
+      && new Date() <= new Date(user.passwordResetAuthorizationExpiresAt);
+
+    if (!challengeHash || !challengeExpiresAt || new Date() > new Date(challengeExpiresAt)) {
+      if (hasActiveAuthorization) {
+        return res.status(401).json({ error: 'Invalid or expired reset code' });
+      }
+      await clearPasswordResetChallenge(user.id, normalizedEmail);
+      return res.status(401).json({ error: 'Invalid or expired reset code' });
+    }
+
+    if (!verifyOtpHash(otp, challengeHash)) {
+      const nextAttemptCount = passwordResetAttempts + 1;
+      if (nextAttemptCount >= 5) {
+        await clearPasswordResetChallenge(user.id, normalizedEmail);
+        return res.status(429).json({ error: 'Too many invalid reset attempts. Please request a new code.' });
+      }
+
+      await updateUser(user.id, { passwordResetAttempts: nextAttemptCount });
+      return res.status(401).json({ error: 'Invalid reset code' });
+    }
+
+    const resetAuthorization = randomUUID();
+    const resetAuthorizationHash = createHash('sha256').update(resetAuthorization).digest('hex');
+    const authorizationExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await updateUser(user.id, {
+      passwordResetAttempts: 0,
+      passwordResetOtpHash: null,
+      passwordResetExpiresAt: null,
+      passwordResetAuthorizationHash: resetAuthorizationHash,
+      passwordResetAuthorizationExpiresAt: authorizationExpiresAt,
+    });
+
+    passwordResetSessions.set(normalizedEmail, { otpHash: null, expiresAt: null, resetAuthorization });
+    return res.json({ resetAuthorization });
+  } catch (error) {
+    console.error('Verify reset OTP error:', error);
+    return res.status(500).json({ error: 'Unable to verify the reset code. Please try again.' });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { resetAuthorization, newPassword, confirmPassword } = req.body || {};
+
+    if (typeof resetAuthorization !== 'string' || !resetAuthorization.trim()) {
+      return res.status(401).json({ error: 'Invalid reset authorization' });
+    }
+
+    if (!isValidPassword(newPassword) || !isValidPassword(confirmPassword) || newPassword !== confirmPassword) {
+      return res.status(400).json({ error: 'Passwords must match and be between 8 and 128 characters' });
+    }
+
+    const authorizationHash = createHash('sha256').update(resetAuthorization).digest('hex');
+    const user = await getUserByPasswordResetAuthorizationHash(authorizationHash);
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid reset authorization' });
+    }
+
+    if (!user.passwordResetAuthorizationExpiresAt || new Date() > new Date(user.passwordResetAuthorizationExpiresAt)) {
+      await clearPasswordResetChallenge(user.id, user.email);
+      return res.status(401).json({ error: 'Reset authorization expired' });
+    }
+
+    const updatedUser = await updateUser(user.id, {
+      password: newPassword,
+      passwordResetOtpHash: null,
+      passwordResetAttempts: 0,
+      passwordResetExpiresAt: null,
+      passwordResetAuthorizationHash: null,
+      passwordResetAuthorizationExpiresAt: null,
+      passwordResetRequestWindowStartedAt: null,
+      passwordResetRequestCount: 0,
+      sessionVersion: (user.sessionVersion ?? 0) + 1,
+    });
+
+    if (!updatedUser) {
+      return res.status(401).json({ error: 'Invalid reset authorization' });
+    }
+
+    passwordResetSessions.delete((user.email || '').toLowerCase());
+    return res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({ error: 'Unable to reset the password. Please try again.' });
   }
 };
 

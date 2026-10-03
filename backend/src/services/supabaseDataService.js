@@ -189,7 +189,7 @@ const isSupabaseUnavailableError = (error) => {
 
 const normalizeUserRecord = (user) => {
   if (!user) return null;
-  return {
+  const normalized = {
     ...user,
     id: user.id ?? user._id ?? null,
     name: user.name ?? null,
@@ -200,13 +200,34 @@ const normalizeUserRecord = (user) => {
     isEmailVerified: user.isEmailVerified ?? user.is_email_verified ?? false,
     sessionVersion: user.sessionVersion ?? user.session_version ?? 0,
     otp: user.otp ?? null,
+    otpHash: user.otpHash ?? user.otp_hash ?? null,
+    otpAttempts: user.otpAttempts ?? user.otp_attempts ?? 0,
     otpExpiresAt: user.otpExpiresAt ?? user.otp_expires_at ?? null,
+    passwordResetOtpHash: user.passwordResetOtpHash ?? user.password_reset_otp_hash ?? null,
+    passwordResetAttempts: user.passwordResetAttempts ?? user.password_reset_attempts ?? 0,
+    passwordResetExpiresAt: user.passwordResetExpiresAt ?? user.password_reset_expires_at ?? null,
+    passwordResetAuthorizationHash: user.passwordResetAuthorizationHash ?? user.password_reset_authorization_hash ?? null,
+    passwordResetAuthorizationExpiresAt: user.passwordResetAuthorizationExpiresAt ?? user.password_reset_authorization_expires_at ?? null,
+    passwordResetRequestWindowStartedAt: user.passwordResetRequestWindowStartedAt ?? user.password_reset_request_window_started_at ?? null,
+    passwordResetRequestCount: user.passwordResetRequestCount ?? user.password_reset_request_count ?? 0,
     phone: user.phone ?? null,
     avatarUrl: user.avatarUrl ?? user.avatar_url ?? null,
     preferences: user.preferences ?? DEFAULT_USER_PREFERENCES,
     createdAt: user.createdAt ?? user.created_at ?? null,
     updatedAt: user.updatedAt ?? user.updated_at ?? null,
   };
+
+  return normalized;
+};
+
+const getExplicitFieldValue = (updates, camelCaseKey, snakeCaseKey) => {
+  if (Object.prototype.hasOwnProperty.call(updates, camelCaseKey)) {
+    return updates[camelCaseKey];
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, snakeCaseKey)) {
+    return updates[snakeCaseKey];
+  }
+  return undefined;
 };
 
 const readUserStore = async () => {
@@ -285,7 +306,16 @@ export const createUser = async (userData) => {
     is_email_verified: userData.isEmailVerified ?? userData.is_email_verified ?? false,
     session_version: userData.sessionVersion ?? userData.session_version ?? 0,
     otp: userData.otp ?? null,
+    otp_hash: userData.otpHash ?? userData.otp_hash ?? null,
+    otp_attempts: userData.otpAttempts ?? userData.otp_attempts ?? 0,
     otp_expires_at: userData.otpExpiresAt ?? userData.otp_expires_at ?? null,
+    password_reset_otp_hash: userData.passwordResetOtpHash ?? userData.password_reset_otp_hash ?? null,
+    password_reset_attempts: userData.passwordResetAttempts ?? userData.password_reset_attempts ?? 0,
+    password_reset_expires_at: userData.passwordResetExpiresAt ?? userData.password_reset_expires_at ?? null,
+    password_reset_authorization_hash: userData.passwordResetAuthorizationHash ?? userData.password_reset_authorization_hash ?? null,
+    password_reset_authorization_expires_at: userData.passwordResetAuthorizationExpiresAt ?? userData.password_reset_authorization_expires_at ?? null,
+    password_reset_request_window_started_at: userData.passwordResetRequestWindowStartedAt ?? userData.password_reset_request_window_started_at ?? null,
+    password_reset_request_count: userData.passwordResetRequestCount ?? userData.password_reset_request_count ?? 0,
     phone: userData.phone ?? null,
     avatar_url: userData.avatarUrl ?? userData.avatar_url ?? null,
     preferences: userData.preferences ?? DEFAULT_USER_PREFERENCES,
@@ -315,7 +345,16 @@ export const createUser = async (userData) => {
         isEmailVerified: userData.isEmailVerified ?? userData.is_email_verified ?? false,
         sessionVersion: userData.sessionVersion ?? userData.session_version ?? 0,
         otp: userData.otp ?? null,
+        otpHash: userData.otpHash ?? userData.otp_hash ?? null,
+        otpAttempts: userData.otpAttempts ?? userData.otp_attempts ?? 0,
         otpExpiresAt: userData.otpExpiresAt ?? userData.otp_expires_at ?? null,
+        passwordResetOtpHash: userData.passwordResetOtpHash ?? userData.password_reset_otp_hash ?? null,
+        passwordResetAttempts: userData.passwordResetAttempts ?? userData.password_reset_attempts ?? 0,
+        passwordResetExpiresAt: userData.passwordResetExpiresAt ?? userData.password_reset_expires_at ?? null,
+        passwordResetAuthorizationHash: userData.passwordResetAuthorizationHash ?? userData.password_reset_authorization_hash ?? null,
+        passwordResetAuthorizationExpiresAt: userData.passwordResetAuthorizationExpiresAt ?? userData.password_reset_authorization_expires_at ?? null,
+        passwordResetRequestWindowStartedAt: userData.passwordResetRequestWindowStartedAt ?? userData.password_reset_request_window_started_at ?? null,
+        passwordResetRequestCount: userData.passwordResetRequestCount ?? userData.password_reset_request_count ?? 0,
         phone: userData.phone ?? null,
         avatarUrl: userData.avatarUrl ?? userData.avatar_url ?? null,
         preferences: userData.preferences ?? DEFAULT_USER_PREFERENCES,
@@ -339,6 +378,33 @@ export const updateUser = async (id, updates) => {
   if (updates.otpExpiresAt !== undefined || updates.otp_expires_at !== undefined) payload.otp_expires_at = updates.otpExpiresAt ?? updates.otp_expires_at;
   if (updates.sessionVersion !== undefined || updates.session_version !== undefined) payload.session_version = updates.sessionVersion ?? updates.session_version;
   if (updates.otp !== undefined) payload.otp = updates.otp;
+  if (Object.prototype.hasOwnProperty.call(updates, 'otpHash') || Object.prototype.hasOwnProperty.call(updates, 'otp_hash')) {
+    payload.otp_hash = getExplicitFieldValue(updates, 'otpHash', 'otp_hash');
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, 'otpAttempts') || Object.prototype.hasOwnProperty.call(updates, 'otp_attempts')) {
+    payload.otp_attempts = getExplicitFieldValue(updates, 'otpAttempts', 'otp_attempts');
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, 'passwordResetOtpHash') || Object.prototype.hasOwnProperty.call(updates, 'password_reset_otp_hash')) {
+    payload.password_reset_otp_hash = getExplicitFieldValue(updates, 'passwordResetOtpHash', 'password_reset_otp_hash');
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, 'passwordResetExpiresAt') || Object.prototype.hasOwnProperty.call(updates, 'password_reset_expires_at')) {
+    payload.password_reset_expires_at = getExplicitFieldValue(updates, 'passwordResetExpiresAt', 'password_reset_expires_at');
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, 'passwordResetAttempts') || Object.prototype.hasOwnProperty.call(updates, 'password_reset_attempts')) {
+    payload.password_reset_attempts = getExplicitFieldValue(updates, 'passwordResetAttempts', 'password_reset_attempts');
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, 'passwordResetAuthorizationHash') || Object.prototype.hasOwnProperty.call(updates, 'password_reset_authorization_hash')) {
+    payload.password_reset_authorization_hash = getExplicitFieldValue(updates, 'passwordResetAuthorizationHash', 'password_reset_authorization_hash');
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, 'passwordResetAuthorizationExpiresAt') || Object.prototype.hasOwnProperty.call(updates, 'password_reset_authorization_expires_at')) {
+    payload.password_reset_authorization_expires_at = getExplicitFieldValue(updates, 'passwordResetAuthorizationExpiresAt', 'password_reset_authorization_expires_at');
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, 'passwordResetRequestWindowStartedAt') || Object.prototype.hasOwnProperty.call(updates, 'password_reset_request_window_started_at')) {
+    payload.password_reset_request_window_started_at = getExplicitFieldValue(updates, 'passwordResetRequestWindowStartedAt', 'password_reset_request_window_started_at');
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, 'passwordResetRequestCount') || Object.prototype.hasOwnProperty.call(updates, 'password_reset_request_count')) {
+    payload.password_reset_request_count = getExplicitFieldValue(updates, 'passwordResetRequestCount', 'password_reset_request_count');
+  }
   if (updates.phone !== undefined) payload.phone = updates.phone;
   if (updates.avatarUrl !== undefined || updates.avatar_url !== undefined) payload.avatar_url = updates.avatarUrl ?? updates.avatar_url;
   if (updates.preferences !== undefined) payload.preferences = updates.preferences;
@@ -363,16 +429,25 @@ export const updateUser = async (id, updates) => {
         ...updates,
         id,
         passwordHash: payload.password_hash ?? storedUser.passwordHash,
-        sessionVersion: updates.sessionVersion ?? updates.session_version ?? storedUser.sessionVersion ?? 0,
-        isActive: updates.isActive ?? updates.is_active ?? storedUser.isActive,
-        isEmailVerified: updates.isEmailVerified ?? updates.is_email_verified ?? storedUser.isEmailVerified,
-        otpExpiresAt: updates.otpExpiresAt ?? updates.otp_expires_at ?? storedUser.otpExpiresAt,
+        sessionVersion: Object.prototype.hasOwnProperty.call(updates, 'sessionVersion') ? updates.sessionVersion : (Object.prototype.hasOwnProperty.call(updates, 'session_version') ? updates.session_version : storedUser.sessionVersion ?? 0),
+        isActive: Object.prototype.hasOwnProperty.call(updates, 'isActive') ? updates.isActive : (Object.prototype.hasOwnProperty.call(updates, 'is_active') ? updates.is_active : storedUser.isActive),
+        isEmailVerified: Object.prototype.hasOwnProperty.call(updates, 'isEmailVerified') ? updates.isEmailVerified : (Object.prototype.hasOwnProperty.call(updates, 'is_email_verified') ? updates.is_email_verified : storedUser.isEmailVerified),
+        otpHash: Object.prototype.hasOwnProperty.call(updates, 'otpHash') ? updates.otpHash : (Object.prototype.hasOwnProperty.call(updates, 'otp_hash') ? updates.otp_hash : storedUser.otpHash),
+        otpAttempts: Object.prototype.hasOwnProperty.call(updates, 'otpAttempts') ? updates.otpAttempts : (Object.prototype.hasOwnProperty.call(updates, 'otp_attempts') ? updates.otp_attempts : storedUser.otpAttempts ?? 0),
+        otpExpiresAt: Object.prototype.hasOwnProperty.call(updates, 'otpExpiresAt') ? updates.otpExpiresAt : (Object.prototype.hasOwnProperty.call(updates, 'otp_expires_at') ? updates.otp_expires_at : storedUser.otpExpiresAt),
         otp: Object.prototype.hasOwnProperty.call(updates, 'otp') ? updates.otp : storedUser.otp,
-        phone: updates.phone ?? storedUser.phone,
-        avatarUrl: updates.avatarUrl ?? updates.avatar_url ?? storedUser.avatarUrl,
-        preferences: updates.preferences ?? storedUser.preferences ?? DEFAULT_USER_PREFERENCES,
-        role: updates.role ?? storedUser.role,
-        name: updates.name ?? storedUser.name,
+        passwordResetOtpHash: Object.prototype.hasOwnProperty.call(updates, 'passwordResetOtpHash') ? updates.passwordResetOtpHash : (Object.prototype.hasOwnProperty.call(updates, 'password_reset_otp_hash') ? updates.password_reset_otp_hash : storedUser.passwordResetOtpHash),
+        passwordResetAttempts: Object.prototype.hasOwnProperty.call(updates, 'passwordResetAttempts') ? updates.passwordResetAttempts : (Object.prototype.hasOwnProperty.call(updates, 'password_reset_attempts') ? updates.password_reset_attempts : storedUser.passwordResetAttempts ?? 0),
+        passwordResetExpiresAt: Object.prototype.hasOwnProperty.call(updates, 'passwordResetExpiresAt') ? updates.passwordResetExpiresAt : (Object.prototype.hasOwnProperty.call(updates, 'password_reset_expires_at') ? updates.password_reset_expires_at : storedUser.passwordResetExpiresAt),
+        passwordResetAuthorizationHash: Object.prototype.hasOwnProperty.call(updates, 'passwordResetAuthorizationHash') ? updates.passwordResetAuthorizationHash : (Object.prototype.hasOwnProperty.call(updates, 'password_reset_authorization_hash') ? updates.password_reset_authorization_hash : storedUser.passwordResetAuthorizationHash),
+        passwordResetAuthorizationExpiresAt: Object.prototype.hasOwnProperty.call(updates, 'passwordResetAuthorizationExpiresAt') ? updates.passwordResetAuthorizationExpiresAt : (Object.prototype.hasOwnProperty.call(updates, 'password_reset_authorization_expires_at') ? updates.password_reset_authorization_expires_at : storedUser.passwordResetAuthorizationExpiresAt),
+        passwordResetRequestWindowStartedAt: Object.prototype.hasOwnProperty.call(updates, 'passwordResetRequestWindowStartedAt') ? updates.passwordResetRequestWindowStartedAt : (Object.prototype.hasOwnProperty.call(updates, 'password_reset_request_window_started_at') ? updates.password_reset_request_window_started_at : storedUser.passwordResetRequestWindowStartedAt),
+        passwordResetRequestCount: Object.prototype.hasOwnProperty.call(updates, 'passwordResetRequestCount') ? updates.passwordResetRequestCount : (Object.prototype.hasOwnProperty.call(updates, 'password_reset_request_count') ? updates.password_reset_request_count : storedUser.passwordResetRequestCount ?? 0),
+        phone: Object.prototype.hasOwnProperty.call(updates, 'phone') ? updates.phone : storedUser.phone,
+        avatarUrl: Object.prototype.hasOwnProperty.call(updates, 'avatarUrl') ? updates.avatarUrl : (Object.prototype.hasOwnProperty.call(updates, 'avatar_url') ? updates.avatar_url : storedUser.avatarUrl),
+        preferences: Object.prototype.hasOwnProperty.call(updates, 'preferences') ? updates.preferences : storedUser.preferences ?? DEFAULT_USER_PREFERENCES,
+        role: Object.prototype.hasOwnProperty.call(updates, 'role') ? updates.role : storedUser.role,
+        name: Object.prototype.hasOwnProperty.call(updates, 'name') ? updates.name : storedUser.name,
         updatedAt: new Date().toISOString(),
       };
       if (updates.email) {
@@ -412,6 +487,44 @@ export const uploadCarImage = async (carId, buffer, contentType) => {
 
 export const compareUserPassword = async (passwordHash, password) => {
   return bcryptjs.compare(password, passwordHash);
+};
+
+export const startPasswordResetChallenge = async (userId, challenge = {}) => {
+  if (!userId) return null;
+  const normalized = {
+    otpHash: challenge.otpHash ?? challenge.otp_hash ?? null,
+    expiresAt: challenge.expiresAt ?? challenge.expires_at ?? null,
+    attempts: challenge.attempts ?? challenge.attempts ?? 0,
+  };
+
+  return updateUser(userId, {
+    passwordResetOtpHash: normalized.otpHash,
+    passwordResetExpiresAt: normalized.expiresAt,
+    passwordResetAttempts: normalized.attempts,
+    passwordResetAuthorizationHash: null,
+    passwordResetAuthorizationExpiresAt: null,
+  });
+};
+
+export const getUserByPasswordResetAuthorizationHash = async (authorizationHash) => {
+  if (!authorizationHash) return null;
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from(USERS_TABLE)
+      .select('*')
+      .eq('password_reset_authorization_hash', authorizationHash)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data ? mapRow(data) : null;
+  } catch (error) {
+    if (isSupabaseUnavailableError(error)) {
+      const storedUser = await getUserFallback((user) => (user.passwordResetAuthorizationHash || '').toLowerCase() === authorizationHash.toLowerCase());
+      return normalizeUserRecord(storedUser);
+    }
+    applyError(error);
+  }
 };
 
 export const deleteUser = async (id) => {

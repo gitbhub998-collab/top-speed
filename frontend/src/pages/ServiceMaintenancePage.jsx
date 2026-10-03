@@ -19,6 +19,7 @@ export const ServiceMaintenancePage = () => {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -74,8 +75,12 @@ export const ServiceMaintenancePage = () => {
 
     try {
       // Send to backend
-      await serviceService.sendMaintenanceRequest(normalizedFormData);
+      const response = await serviceService.sendMaintenanceRequest({
+        ...normalizedFormData,
+        email: normalizedFormData.email.toLowerCase(),
+      });
       
+      setSuccessMessage(response.data?.message || 'Your maintenance request was received.');
       setSubmitted(true);
       setFormData({
         clientName: '',
@@ -91,7 +96,9 @@ export const ServiceMaintenancePage = () => {
       setTimeout(() => setSubmitted(false), 5000);
     } catch (err) {
       console.error('Error submitting form:', err);
-      setError(err.response?.data?.message || 'Failed to send request. Please try again.');
+      const responseData = err.response?.data;
+      const fieldErrors = responseData?.errors ? Object.values(responseData.errors).join(' ') : '';
+      setError(fieldErrors || responseData?.message || 'Failed to send request. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -143,7 +150,7 @@ export const ServiceMaintenancePage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="mb-4 sm:mb-6 p-2 sm:p-3 md:p-4 bg-green-600 text-white text-xs sm:text-sm md:text-base rounded-lg text-center font-semibold"
               >
-                Your maintenance request has been sent to our service team!
+                {successMessage}
               </motion.div>
             )}
 

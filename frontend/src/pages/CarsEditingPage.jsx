@@ -23,6 +23,7 @@ export const CarsEditingPage = () => {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -66,8 +67,15 @@ export const CarsEditingPage = () => {
 
     try {
       // Send to backend API using axios client
-      await serviceService.sendModificationRequest(formData);
+      const response = await serviceService.sendModificationRequest({
+        ...formData,
+        clientName: formData.clientName.trim(),
+        phoneNumber: formData.phoneNumber.trim(),
+        email: formData.email.trim().toLowerCase(),
+        carType: formData.carType.trim(),
+      });
 
+      setSuccessMessage(response.data?.message || 'Your modification request was received.');
       setSubmitted(true);
       setFormData({
         clientName: '',
@@ -89,7 +97,9 @@ export const CarsEditingPage = () => {
       }, 5000);
     } catch (err) {
       console.error('Error submitting form:', err);
-      setError('Failed to send request. Please try again.');
+      const responseData = err.response?.data;
+      const fieldErrors = responseData?.errors ? Object.values(responseData.errors).join(' ') : '';
+      setError(fieldErrors || responseData?.message || 'Failed to send request. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -142,7 +152,7 @@ export const CarsEditingPage = () => {
                 exit={{ opacity: 0, y: -10 }}
                 className="mb-4 sm:mb-6 p-2 sm:p-3 md:p-4 bg-red-600 text-white text-xs sm:text-sm md:text-base rounded-lg text-center font-semibold"
               >
-                Your request has been sent to our modification team!
+                {successMessage}
               </motion.div>
             )}
 
