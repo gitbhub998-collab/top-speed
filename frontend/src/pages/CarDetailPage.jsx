@@ -509,7 +509,7 @@ export const CarDetailPage = () => {
               <p className="car-description">{car.description}</p>
               <div className="car-price-block">
                 <span>Starting price</span>
-                <strong>{formatPrice(car.price) || 'N/A'} <small>AED</small></strong>
+                <strong>{formatPrice(car.price) || 'N/A'} <small>EGP</small></strong>
               </div>
               <div className="car-identity-tags">
                 <span><Cog size={15} /> {car.drivetrain}</span>
@@ -565,7 +565,7 @@ export const CarDetailPage = () => {
                     return (
                       <label key={modificationId} className={`modification-row ${isSelected ? 'modification-row--selected' : ''}`}>
                         <span className="modification-check"><input type="checkbox" checked={isSelected} onChange={() => handleModificationToggle(modification)} /><span /></span>
-                        <span className="modification-copy"><strong>{modification.name}</strong><small>{modification.category || modification.type || 'Other'} · {modification.priceType === 'percentage' ? `${modification.price || 0}%` : `AED ${Number(modification.price || 0).toLocaleString()}`}</small></span>
+                        <span className="modification-copy"><strong>{modification.name}</strong><small>{modification.category || modification.type || 'Other'} · {modification.priceType === 'percentage' ? `${modification.price || 0}%` : `EGP ${Number(modification.price || 0).toLocaleString()}`}</small></span>
                         <span className="modification-output">{modification.horsepower ? `+${modification.horsepower} HP` : ''}{modification.torque ? ` · +${modification.torque} Nm` : ''}</span>
                       </label>
                     );

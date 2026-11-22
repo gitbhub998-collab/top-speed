@@ -240,7 +240,7 @@ export const ModificationsManager = ({ modifications, cars, onChanged, onNotify 
                 </div>
                 <p className="text-sm text-slate-400 max-w-3xl">{modification.description || 'No description provided.'}</p>
                 <div className="flex flex-wrap gap-x-5 gap-y-2 mt-4 text-sm text-slate-300">
-                  <span>{modification.priceType === 'percentage' ? `${modification.price || 0}%` : `AED ${Number(modification.price || 0).toLocaleString()}`}</span>
+                  <span>{modification.priceType === 'percentage' ? `${modification.price || 0}%` : `EGP ${Number(modification.price || 0).toLocaleString()}`}</span>
                   <span>{compatibleCount} compatible vehicle{compatibleCount === 1 ? '' : 's'}</span>
                   {modification.horsepower ? <span>+{modification.horsepower} HP</span> : null}
                   {modification.torque ? <span>+{modification.torque} Nm</span> : null}
@@ -315,7 +315,7 @@ export const ModificationsManager = ({ modifications, cars, onChanged, onNotify 
           <div className="form-surface border rounded-lg max-w-lg w-full p-6">
             <div className="flex items-start justify-between gap-3"><div><p className="eyebrow mb-2">Modification details</p><h4 className="display-heading text-3xl text-white font-normal">{viewTarget.name}</h4></div><button type="button" onClick={() => setViewTarget(null)} aria-label="Close details" className="p-2 rounded bg-white/5"><X size={18} /></button></div>
             <p className="text-sm text-slate-400 mt-4">{viewTarget.description || 'No description provided.'}</p>
-            <div className="grid grid-cols-2 gap-3 mt-5 text-sm"><div><p className="text-slate-500">Category</p><p className="text-white">{viewTarget.category || viewTarget.type || 'Other'}</p></div><div><p className="text-slate-500">Status</p><p className="text-white">{viewTarget.isActive === false ? 'Inactive' : 'Active'}</p></div><div><p className="text-slate-500">Price</p><p className="text-white">{viewTarget.priceType === 'percentage' ? `${viewTarget.price || 0}%` : `AED ${Number(viewTarget.price || 0).toLocaleString()}`}</p></div><div><p className="text-slate-500">Availability</p><p className="text-white">{viewTarget.availability || 'Unlimited'}</p></div></div>
+            <div className="grid grid-cols-2 gap-3 mt-5 text-sm"><div><p className="text-slate-500">Category</p><p className="text-white">{viewTarget.category || viewTarget.type || 'Other'}</p></div><div><p className="text-slate-500">Status</p><p className="text-white">{viewTarget.isActive === false ? 'Inactive' : 'Active'}</p></div><div><p className="text-slate-500">Price</p><p className="text-white">{viewTarget.priceType === 'percentage' ? `${viewTarget.price || 0}%` : `EGP ${Number(viewTarget.price || 0).toLocaleString()}`}</p></div><div><p className="text-slate-500">Availability</p><p className="text-white">{viewTarget.availability || 'Unlimited'}</p></div></div>
             <button type="button" onClick={() => { setViewTarget(null); openEdit(viewTarget); }} className="accent-button mt-6 px-4 py-2.5 rounded font-semibold text-sm inline-flex items-center gap-2"><Edit size={16} /> Edit modification</button>
           </div>
         </div>

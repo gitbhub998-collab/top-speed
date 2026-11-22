@@ -635,7 +635,7 @@ export const AdminDashboard = () => {
                         {/* Price */}
                         <div hidden={!isFieldEnabled('price')}>
                           <label className="block text-sm font-semibold text-gray-300 mb-2">
-                            Price (AED)
+                            Price (EGP)
                           </label>
                           <input
                             type="number"
@@ -983,7 +983,7 @@ export const AdminDashboard = () => {
                               </p>
                               {car.price > 0 && (
                                 <p className="text-red-400 font-semibold mb-3 text-sm sm:text-base">
-                                  AED {Number(car.price || 0).toLocaleString()}
+                                  EGP {Number(car.price || 0).toLocaleString()}
                                 </p>
                               )}
                               <div className="flex gap-2 flex-wrap">
@@ -1113,7 +1113,7 @@ export const AdminDashboard = () => {
                                     }
                                   >
                                     {car.price > 0
-                                      ? `AED ${Number(car.price || 0).toLocaleString()}`
+                                      ? `EGP ${Number(car.price || 0).toLocaleString()}`
                                       : 'Not set'}
                                   </span>
                                 </td>
@@ -1228,7 +1228,7 @@ export const AdminDashboard = () => {
               <h3 className="text-lg sm:text-2xl font-bold text-white mb-4">Edit Price</h3>
               <div className="mb-6">
                 <label className="block text-xs sm:text-sm font-semibold text-gray-300 mb-2">
-                  Price (AED)
+                  Price (EGP)
                 </label>
                 <input
                   type="number"

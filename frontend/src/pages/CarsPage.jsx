@@ -355,7 +355,8 @@ export const CarsPage = () => {
                   <p className="mb-3 text-base font-bold text-orange-200 sm:mb-4 sm:text-lg md:text-xl">
                     {new Intl.NumberFormat('en-US', {
                       minimumFractionDigits: 0,
-                    }).format(car.price)}
+                    }).format(car.price)}{' '}
+                    <small className="text-xs font-semibold text-orange-100/70">EGP</small>
                   </p>
                   {car.modifications?.length > 0 && (
                     <div className="mb-4 rounded-[var(--radius-sm)] border border-orange-200/10 bg-orange-200/[0.04] p-3">
@@ -367,7 +368,7 @@ export const CarsPage = () => {
                             <strong className="shrink-0 text-orange-200">
                               {modification.priceType === 'percentage'
                                 ? `${modification.price || 0}%`
-                                : `AED ${Number(modification.price || 0).toLocaleString()}`}
+                                : `EGP ${Number(modification.price || 0).toLocaleString()}`}
                             </strong>
                           </div>
                         ))}
