@@ -38,10 +38,20 @@ const localOrigins = [
   'http://localhost:3000',
 ];
 
+// Vercel preview deployments of this project's frontend (branch builds).
+// Production behavior is unchanged; this only lets branch previews talk to the API
+// so changes can be tested before merging.
+const frontendPreviewOrigin = /^https:\/\/top-speed-frontend-git-[a-z0-9-]+-gitbhub998-collabs-projects\.vercel\.app$/;
+
 const isAllowedOrigin = (origin) => {
   if (!origin) return true;
 
   const normalized = origin.toLowerCase().replace(/\/+$/, '');
+
+  // Check Vercel preview origins of the frontend project
+  if (frontendPreviewOrigin.test(normalized)) {
+    return true;
+  }
 
   // Check local origins
   if (NODE_ENV !== 'production' && localOrigins.includes(normalized)) {
