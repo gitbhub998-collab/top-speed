@@ -101,12 +101,12 @@ export const SignUpPage = () => {
       <div className="w-full max-w-[29rem]">
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center gap-3 text-white">
-            <div className="flex items-baseline gap-1 text-2xl font-black tracking-[-0.08em] text-white sm:text-3xl">
-              <span className="text-white">TOP</span>
+            <div className="flex items-baseline gap-1 text-2xl font-black tracking-[-0.08em] shell-heading sm:text-3xl">
+              <span className="shell-heading">TOP</span>
               <span className="text-[#f3b152]">SPEED</span>
             </div>
           </div>
-          <div className="mt-3 text-[0.6rem] font-semibold uppercase tracking-[0.32em] text-slate-400">
+          <div className="mt-3 text-[0.6rem] font-semibold uppercase tracking-[0.32em] shell-subtitle">
             Performance / Craft
           </div>
         </div>

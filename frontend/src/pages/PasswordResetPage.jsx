@@ -125,8 +125,8 @@ export const PasswordResetPage = () => {
       <section className="w-full max-w-md" aria-labelledby="reset-heading">
         <header className="mb-6 sm:mb-10">
           <p className="eyebrow mb-3">{heading[0]}</p>
-          <h1 id="reset-heading" className="display-heading text-4xl sm:text-5xl font-normal text-white mb-3">{heading[1]}</h1>
-          <p className="text-slate-400 text-sm">
+          <h1 id="reset-heading" className="display-heading text-4xl sm:text-5xl font-normal shell-heading mb-3">{heading[1]}</h1>
+          <p className="shell-subtitle text-sm">
             {stage === 'email' && 'Enter the email address associated with your account.'}
             {stage === 'otp' && `Enter the six-digit code for ${email}.`}
             {stage === 'password' && 'Your new password must be 8 to 128 characters and include at least one letter and one number.'}

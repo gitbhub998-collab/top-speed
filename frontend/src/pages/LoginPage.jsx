@@ -46,8 +46,8 @@ export const LoginPage = () => {
         {/* Header Section */}
         <div className="mb-6 sm:mb-10">
           <p className="eyebrow mb-3">Welcome back</p>
-          <h1 className="display-heading text-4xl sm:text-5xl font-normal text-white mb-3">Sign In</h1>
-          <p className="text-slate-400 text-sm">Access your TOP SPEED account and continue your build.</p>
+          <h1 className="display-heading text-4xl sm:text-5xl font-normal shell-heading mb-3">Sign In</h1>
+          <p className="shell-subtitle text-sm">Access your TOP SPEED account and continue your build.</p>
         </div>
 
         {/* Form Card */}
