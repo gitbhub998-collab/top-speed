@@ -89,6 +89,10 @@ export const PasswordResetPage = () => {
       setError('Password must be between 8 and 128 characters.');
       return;
     }
+    if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+      setError('Password must include at least one letter and one number.');
+      return;
+    }
     if (password !== confirmation) {
       setError('Passwords do not match.');
       return;
@@ -125,7 +129,7 @@ export const PasswordResetPage = () => {
           <p className="text-slate-400 text-sm">
             {stage === 'email' && 'Enter the email address associated with your account.'}
             {stage === 'otp' && `Enter the six-digit code for ${email}.`}
-            {stage === 'password' && 'Your new password must be 8 to 128 characters.'}
+            {stage === 'password' && 'Your new password must be 8 to 128 characters and include at least one letter and one number.'}
             {stage === 'success' && 'Your password has been changed. Sign in with your new password.'}
           </p>
         </header>

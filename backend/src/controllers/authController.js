@@ -23,6 +23,15 @@ export const generateOTP = () => randomInt(100000, 1000000).toString();
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isValidPassword = (password) => typeof password === 'string' && password.length >= 8 && password.length <= 128;
+// Strength rule for NEW passwords only (signup, reset, change). Login and
+// email-change keep the plain length check so existing accounts always work.
+const COMMON_PASSWORDS = new Set(['password', 'password1', '12345678', '123456789', '1234567890', 'qwerty123', '11111111', '00000000', 'abc12345', 'iloveyou', 'letmein1', 'welcome1']);
+const STRONG_PASSWORD_MESSAGE = 'Password must be 8-128 characters, include at least one letter and one number, and not be a common password';
+const isStrongPassword = (password) => {
+  if (!isValidPassword(password)) return false;
+  if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) return false;
+  return !COMMON_PASSWORDS.has(password.toLowerCase());
+};
 const isValidName = (name) => typeof name === 'string' && name.length >= 2 && name.length <= 100;
 const isValidPhone = (phone) => phone === null || (typeof phone === 'string' && phone.length <= 30 && phone.replace(/\D/g, '').length >= 7);
 const preferenceShape = (preferences = {}) => ({
@@ -149,8 +158,11 @@ export const register = async (req, res) => {
   try {
     const { name, email, password } = normalizeRegistrationInput(req.body || {});
 
-    if (!isValidName(name) || !EMAIL_PATTERN.test(email) || !isValidPassword(password)) {
+    if (!isValidName(name) || !EMAIL_PATTERN.test(email)) {
       return res.status(400).json({ error: 'Name, email and password are required' });
+    }
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({ error: STRONG_PASSWORD_MESSAGE });
     }
 
     let user = await getUserByEmail(email);
@@ -478,8 +490,8 @@ export const resetPassword = async (req, res) => {
       return res.status(401).json({ error: 'Invalid reset authorization' });
     }
 
-    if (!isValidPassword(newPassword) || !isValidPassword(confirmPassword) || newPassword !== confirmPassword) {
-      return res.status(400).json({ error: 'Passwords must match and be between 8 and 128 characters' });
+    if (!isStrongPassword(newPassword) || !isValidPassword(confirmPassword) || newPassword !== confirmPassword) {
+      return res.status(400).json({ error: STRONG_PASSWORD_MESSAGE });
     }
 
     const authorizationHash = createHash('sha256').update(resetAuthorization).digest('hex');
@@ -521,8 +533,8 @@ export const createAdmin = async (req, res) => {
   try {
     const { name, email, password } = req.body || {};
 
-    if (!isValidName(name) || !EMAIL_PATTERN.test(email) || !isValidPassword(password)) {
-      return res.status(400).json({ error: 'Name, email and password are required' });
+    if (!isValidName(name) || !EMAIL_PATTERN.test(email) || !isStrongPassword(password)) {
+      return res.status(400).json({ error: STRONG_PASSWORD_MESSAGE });
     }
 
     let user = await getUserByEmail(email);
@@ -635,8 +647,8 @@ export const updateProfile = async (req, res) => {
 
 export const changePassword = async (req, res) => {
   const { currentPassword, newPassword } = req.body || {};
-  if (!isValidPassword(currentPassword) || !isValidPassword(newPassword)) {
-    return res.status(400).json({ error: 'Passwords must be between 8 and 128 characters' });
+  if (!isValidPassword(currentPassword) || !isStrongPassword(newPassword)) {
+    return res.status(400).json({ error: STRONG_PASSWORD_MESSAGE });
   }
   if (currentPassword === newPassword) return res.status(400).json({ error: 'New password must be different' });
 

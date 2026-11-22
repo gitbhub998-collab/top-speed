@@ -25,8 +25,13 @@ export const SignUpPage = () => {
     });
   };
 
+  const COMMON_PASSWORDS = ['password', 'password1', '12345678', '123456789', '1234567890', 'qwerty123', '11111111', '00000000', 'abc12345', 'iloveyou', 'letmein1', 'welcome1'];
+
   const validatePassword = (pwd) => {
     if (!pwd || pwd.length < 8) return 'Password must be at least 8 characters';
+    if (pwd.length > 128) return 'Password must be at most 128 characters';
+    if (!/[A-Za-z]/.test(pwd) || !/[0-9]/.test(pwd)) return 'Password must include at least one letter and one number';
+    if (COMMON_PASSWORDS.includes(pwd.toLowerCase())) return 'This password is too common, please choose a stronger one';
     return '';
   };
 
@@ -199,7 +204,7 @@ export const SignUpPage = () => {
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#f3b152]" />
-                  Easy to remember and secure
+                  At least one letter and one number
                 </li>
               </ul>
             </div>
