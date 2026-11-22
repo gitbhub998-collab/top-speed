@@ -91,6 +91,23 @@ html[data-theme='light'] aside[role='dialog'] .bg-white\/\[0\.035\] {
   border-color: rgba(20, 37, 56, 0.12);
 }
 
+/* Headings and subtitles that sit directly on .app-shell follow the active theme */
+.shell-heading {
+  color: var(--paper);
+}
+
+.shell-subtitle {
+  color: var(--muted-strong);
+}
+
+html[data-theme='light'] .shell-heading {
+  color: var(--ink);
+}
+
+html[data-theme='light'] .shell-subtitle {
+  color: #405467;
+}
+
 html[data-reduced-motion='true'] *,
 html[data-reduced-motion='true'] *::before,
 html[data-reduced-motion='true'] *::after {
