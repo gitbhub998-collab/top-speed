@@ -587,21 +587,11 @@ export const CarDetailPage = () => {
           <div className="purchase-bar">
             <div><span>Purchase summary</span><strong>{car.brand} {car.model}</strong></div>
             <button onClick={() => {
+              // Only identifiers go in the URL. The checkout page fetches the
+              // car and recomputes the total server-side, so no price or spec
+              // is ever taken from client-supplied parameters.
               const params = new URLSearchParams({
                 carId: car.id,
-                brand: car.brand,
-                model: car.model,
-                year: car.year,
-                price: Number(car.price || 0) + Number(configuration?.totalPrice || 0),
-                horsepower: configuration?.modifiedHorsepower ?? car.horsepower,
-                torque: configuration?.modifiedTorque ?? car.torque,
-                topSpeed: configuration?.modifiedTopSpeed ?? car.topSpeed,
-                acceleration: configuration?.modifiedAcceleration ?? car.acceleration,
-                fuelType: car.fuelType,
-                engineType: car.engine.type,
-                cylinders: car.engine.cylinders,
-                drivetrain: car.drivetrain,
-                imageUrl: car.imageUrl,
                 modificationIds: selectedModificationIds.join(','),
               });
               navigate(`/purchase?${params.toString()}`);
