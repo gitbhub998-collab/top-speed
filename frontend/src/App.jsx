@@ -13,9 +13,26 @@ import { OTPVerificationPage } from './pages/OTPVerificationPage';
 import { PasswordResetPage } from './pages/PasswordResetPage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { useAuth } from './hooks/useAuth';
 import { Navigation } from './components/Navigation';
 import { SettingsPanel } from './components/SettingsPanel';
 import './styles/globals.css';
+
+// Auth pages (signup) should not render for users who are already logged in:
+// send them straight to /home instead of showing the registration form again.
+const RedirectIfAuthenticated = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return null;
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/home" replace />;
+  }
+
+  return children;
+};
 
 function App() {
   const [isSettingsPanelOpen, setIsSettingsPanelOpen] = useState(false);
@@ -30,8 +47,8 @@ function App() {
         />
         <Routes>
           {/* Public Auth Routes */}
-          <Route path="/" element={<SignUpPage />} />
-          <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/" element={<RedirectIfAuthenticated><SignUpPage /></RedirectIfAuthenticated>} />
+          <Route path="/signup" element={<RedirectIfAuthenticated><SignUpPage /></RedirectIfAuthenticated>} />
           <Route path="/verify-otp" element={<OTPVerificationPage />} />
           <Route path="/reset-password" element={<PasswordResetPage />} />
           <Route path="/login" element={<LoginPage />} />
